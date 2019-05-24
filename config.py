@@ -1,23 +1,25 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 from collections import namedtuple
 
-ROOT_URL = "https://taiwanstay.net.tw"
+
+WEBSITE_URL = "https://taiwanstay.net.tw"
 
 County = namedtuple("County", ["code", "text"])
 
-# 城市代碼，可以重此切換
-CITY_CODE = "R"
-
 # 網頁的查詢參數
 PAYLOAD = {
-    "hotelCity": None,
-    "hotelCounty": None,
-    "host": False,
-    "conference": False,
-    "accessible": False,
-    "accessibility": False,
-    "roompricelow": False,
     "page": 1,
-    "listPage": 10
+    "sortBy": None,
+    "act": None,
+    "sel_hotel[]": None,
+    "sel_hotel[]": None,
+    "sel_hotel[]": None,
+    "sel_keyword": None,
+    "sel_city": None,
+    "sel_keyword": None,
+    "sel_city": None,
+    "sel_area": None,
+    "sel_price": None,
+    "sel_room_num": None,
+    "sel_type": None,
 }

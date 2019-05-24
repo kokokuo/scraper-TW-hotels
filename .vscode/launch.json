@@ -1,0 +1,16 @@
+{
+    // 使用 IntelliSense 以得知可用的屬性。
+    // 暫留以檢視現有屬性的描述。
+    // 如需詳細資訊，請瀏覽: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            // 指定程式的進入點檔案，如果不打算指定，要依照開啟的檔案做 F5 執行，可以改輸入 "${file}"
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}
