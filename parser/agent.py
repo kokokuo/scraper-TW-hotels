@@ -10,7 +10,7 @@ from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import Select
-from .dto import CountyOption, TotalPageOfCounty
+from .dto import CountyOption, TotalPageOfCounty, HotelInfo
 from config import County
 
 
@@ -73,12 +73,12 @@ class TaiwanHotelParserAgent(object):
             "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "Cookie": "OAKS_SESS1=l7ginifqoe58sccvof9n3qec64",
             "Host": "taiwanstay.net.tw",
             "Pragma": "no-cache",
             "Upgrade-Insecure-Requests": "1",
             "User-Agent": fake_ua.chrome
         }
+        # "Cookie": "OAKS_SESS1=l7ginifqoe58sccvof9n3qec64",
         return header
 
     def _get_total_page_of_county(self, html: bytes) -> TotalPageOfCounty:
@@ -110,14 +110,39 @@ class TaiwanHotelParserAgent(object):
             for hotel in elem_of_hotels:
                 # 取得 Hotel 連結的後半段 hotel_id, e.g: ./hotel_content.php?hotel_id=2894
                 hotel_id = hotel.find("a").attrs["href"].split("hotel_id=")[1]
-                print(hotel_id)
+                self._retrieve_hotel_info_by_id(hotel_id)
         return None
 
-    def _get_hotel_info(self, hotel_id: int) -> None:
+    def _retrieve_hotel_info_by_id(self, hotel_id: int) -> HotelInfo:
         payload = {"hotel_id": hotel_id}
         resp = requests.get(self.WEBSITE_URL + self.HOTEL_PAGE_ROUTE,
                             params=payload,
                             headers=self._gen_header())
+        hoteltree = etree.HTML(resp.content)
+        # 旅館名稱
+        name_elem = hoteltree.xpath("//*[@id='right-hotel']/h2/text()")
+        name = name_elem[0] if name_elem else None
+        # 訂房專線
+        phone_elem = hoteltree.xpath("//*[@id='tel_div']/p/span[2]/text()")
+        phone = phone_elem[0] if phone_elem else None
+        # 旅館地址
+        address_elem = hoteltree.xpath("//*[@id='right-hotel']/div[4]/div[2]/p/span[2]/text()")
+        address = address_elem[0] if address_elem else None
+        # 房間總數
+        room_elem = hoteltree.xpath("//*[@id='right-hotel']/div[5]/div[2]/p/span[2]/text()")
+        room = room_elem[0] if room_elem else None
+        # 定價
+        prices_elem = hoteltree.xpath("//*[@id='right-hotel']/div[5]/div[3]/p/span[2]/text()")
+        prices = prices_elem[0] if prices_elem else None
+        # 連絡信箱
+        email_elem = hoteltree.xpath("//*[@id='email_div']/a/p/span[2]/text()")
+        email = email_elem[0] if email_elem else None
+        # 網站連結
+        siteurl_elem = hoteltree.xpath("//*[@id='website_div']/p/span[2]/a")
+        siteurl = siteurl_elem[0].get("href") if siteurl_elem and siteurl_elem[0].get("href") else None
+
+        hotel = HotelInfo(name, phone, address, room, prices, email, siteurl)
+        return hotel
 
     def start_parsing(self) -> Workbook:
         # 先對每一個城市爬蟲個鄉鎮
