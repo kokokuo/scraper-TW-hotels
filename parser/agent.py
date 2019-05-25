@@ -65,7 +65,12 @@ class TaiwanHotelParserAgent(object):
         ]
         return counties
 
-    def _gen_header(self):
+    def _gen_header(self) -> dict:
+        """
+        產生訪問網頁用的假 Header
+        Returns:
+            [dict]: 產生好的假 Header 標頭
+        """
         fake_ua = UserAgent()
         header = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
@@ -82,6 +87,13 @@ class TaiwanHotelParserAgent(object):
         return header
 
     def _get_total_page_of_county(self, html: bytes) -> TotalPageOfCounty:
+        """
+        取得該市區鄉鎮的旅館頁面總頁數
+        Args:
+            html (bytes): 市區鄉鎮 HTML
+        Returns:
+            TotalPageOfCounty: 市區鄉鎮的總頁數 DTO
+        """
         soup = BeautifulSoup(html, "html.parser")
         page_with_num = soup.find("span", class_="totalbox")
         pages = page_with_num.find_all("span")[0].text
@@ -89,14 +101,29 @@ class TaiwanHotelParserAgent(object):
         return TotalPageOfCounty(int(pages), (numbers))
 
     def _get_html_content_of_county(self, city: str, county: CountyOption) -> bytes:
+        """
+        取得指定的縣市與下的特定市區鄉鎮 HTML 內容
+        Args:
+            city (str): 縣市名
+            county (CountyOption): 市區鄉鎮 DTO
+        Returns:
+            bytes: 回傳爬取下來的 HTML 內容
+        """
         self._payload["sel_city"] = city
         self._payload["sel_area"] = county.value
-        resp = requests.get(self.WEBSITE_URL + self.SEARCH_ROUNTE, 
+        resp = requests.get(self.WEBSITE_URL + self.SEARCH_ROUNTE,
                             params=self._payload,
                             headers=self._gen_header())
         return resp.content
 
     def _get_hotels_of_pages(self, pages: int) -> List[HotelInfo]:
+        """
+        取得該市區鄉鎮的所有頁面下總旅館資料
+        Args:
+            pages (int): 該市區鄉鎮的總頁數
+        Returns:
+            List[HotelInfo]: 該市區鄉鎮的所有旅館資料
+        """
         hotels_class_css = "col-md-12 col-sm-12 nopadding items-container simple-items"
         hotels_of_pages = []
         for page in range(1, pages + 1):
@@ -105,19 +132,40 @@ class TaiwanHotelParserAgent(object):
             resp = requests.get(self.WEBSITE_URL + self.SEARCH_ROUNTE,
                                 params=self._payload,
                                 headers=self._gen_header())
-            hotels_id: List[int] = self._get_hotels_id_of_current_page(resp.content)
+            hotels_id: List[int] = self._get_hotels_id_of_current_page(page, resp.content)
             hotels = self._retrieve_hotels_of_current_page(hotels_id)
             hotels_of_pages.extend(hotels)
         return hotels_of_pages
 
-    def _get_hotels_id_of_current_page(self, html_content: bytes) -> List[int]:
-        hotelstree = etree.HTML(html_content)
-        # 透過 /@href 語法直接取得連結屬性
-        hotel_links = hotelstree.xpath("//*[@id='searchpage']/div/div/div[3]/div/div/a/@href")
-        hotels_id = [link.split("hotel_id=")[1] for link in hotel_links]
-        return hotels_id
+    def _get_hotels_id_of_current_page(self, page: int, html_content: bytes) -> List[int]:
+        """
+        取得目前此頁面下顯示的所有旅館 id，作為訪問用
+        Args:
+            html_content (bytes): 該頁面的 HTML 內容
+        Returns:
+            List[int]: 該頁面的所有旅館 id
+        """
+        try:
+            hotelstree = etree.HTML(html_content)
+            # 透過 /@href 語法直接取得連結屬性
+            hotel_links = hotelstree.xpath("//*[@id='searchpage']/div/div/div[3]/div/div/a/@href")
+            hotels_id = [link.split("hotel_id=")[1] for link in hotel_links]
+            return hotels_id
+        except Exception as e:
+            print(f"解析第 {page} 頁時，所有旅館的訪問連結取得 id 時異常 ！")
+            print(f"!!!!!!!! == 該頁面顯示的內容 == !!!!!!!!!!!")
+            print(etree.tostring(html_content, method='html', pretty_print=True))
+            raise e
 
     def _retrieve_hotels_of_current_page(self, hotels_id: List[int]) -> List[HotelInfo]:
+        """
+        透過該頁面下的所有旅館 id 取得旅館資料
+        Args:
+            hotels_id (List[int]): 該頁面的所有旅館 id
+
+        Returns:
+            List[HotelInfo]: 該頁面的所有旅館資料
+        """
         hotels = []
         for hotel_id in hotels_id:
             hotel = self._retrieve_hotel_info_by_id(hotel_id)
@@ -125,92 +173,117 @@ class TaiwanHotelParserAgent(object):
         return hotels
 
     def _retrieve_hotel_info_by_id(self, hotel_id: int) -> HotelInfo:
-        payload = {"hotel_id": hotel_id}
-        resp = requests.get(self.WEBSITE_URL + self.HOTEL_PAGE_ROUTE,
-                            params=payload,
-                            headers=self._gen_header())
-        hoteltree = etree.HTML(resp.content)
-        # 旅館名稱
-        name_elem = hoteltree.xpath("//*[@id='right-hotel']/h2/text()")
-        name = name_elem[0] if name_elem else None
-        # 訂房專線
-        phone_elem = hoteltree.xpath("//*[@id='tel_div']/p/span[2]/text()")
-        phone = phone_elem[0] if phone_elem else None
-        # 旅館地址
-        address_elem = hoteltree.xpath("//*[@id='right-hotel']/div[4]/div[2]/p/span[2]/text()")
-        address = address_elem[0] if address_elem else None
-        # 房間總數
-        room_elem = hoteltree.xpath("//*[@id='right-hotel']/div[5]/div[2]/p/span[2]/text()")
-        room = room_elem[0] if room_elem else None
-        # 定價
-        prices_elem = hoteltree.xpath("//*[@id='right-hotel']/div[5]/div[3]/p/span[2]/text()")
-        prices = prices_elem[0] if prices_elem else None
-        # 連絡信箱
-        email_elem = hoteltree.xpath("//*[@id='email_div']/a/p/span[2]/text()")
-        email = email_elem[0] if email_elem else None
-        # 網站連結
-        siteurl_elem = hoteltree.xpath("//*[@id='website_div']/p/span[2]/a")
-        siteurl = siteurl_elem[0].get("href") if siteurl_elem and siteurl_elem[0].get("href") else None
+        """
+        透過訪問旅館資料的 id 取得該旅館頁面下的旅館相關資訊
+        Args:
+            hotel_id (int): 旅館 id
+        Returns:
+            HotelInfo: 該旅館資料
+        """
+        try:
+            payload = {"hotel_id": hotel_id}
+            resp = requests.get(self.WEBSITE_URL + self.HOTEL_PAGE_ROUTE,
+                                params=payload,
+                                headers=self._gen_header())
+            hoteltree = etree.HTML(resp.content)
+            # 旅館名稱
+            name_elem = hoteltree.xpath("//*[@id='right-hotel']/h2/text()")
+            name = name_elem[0] if name_elem else None
+            # 訂房專線
+            phone_elem = hoteltree.xpath("//*[@id='tel_div']/p/span[2]/text()")
+            phone = phone_elem[0] if phone_elem else None
+            # 旅館地址
+            address_elem = hoteltree.xpath("//*[@id='right-hotel']/div[4]/div[2]/p/span[2]/text()")
+            address = address_elem[0] if address_elem else None
+            # 房間總數
+            room_elem = hoteltree.xpath("//*[@id='right-hotel']/div[5]/div[2]/p/span[2]/text()")
+            room = room_elem[0] if room_elem else None
+            # 定價
+            prices_elem = hoteltree.xpath("//*[@id='right-hotel']/div[5]/div[3]/p/span[2]/text()")
+            prices = prices_elem[0] if prices_elem else None
+            # 連絡信箱
+            email_elem = hoteltree.xpath("//*[@id='email_div']/a/p/span[2]/text()")
+            email = email_elem[0] if email_elem else None
+            # 透過 XPath 取得網站連結
+            siteurl_elem = hoteltree.xpath("//*[@id='website_div']/p/span[2]/a")
+            siteurl = siteurl_elem[0].get("href") if siteurl_elem and siteurl_elem[0].get("href") else None
 
-        hotel = HotelInfo(hotel_id, name, phone, address, room, prices, email, siteurl)
-        print(f"--------------------------------------")
-        print("旅館資料 :")
-        print(f" - id: {hotel_id}")
-        print(f" - 名稱: {name}")
-        print(f" - 訂房電話： {phone}")
-        print(f" - 地址: {address}")
-        print(f" - 總房間數: {room}")
-        print(f" - 定價: {prices}")
-        print(f" - 連絡信箱: {email}")
-        print(f" - 網站連結: {siteurl} \n")
-        return hotel
+            hotel = HotelInfo(hotel_id, name, phone, address, room, prices, email, siteurl)
+            print(f"--------------------------------------")
+            print("旅館資料 :")
+            print(f" - id: {hotel_id}")
+            print(f" - 名稱: {name}")
+            print(f" - 訂房電話： {phone}")
+            print(f" - 地址: {address}")
+            print(f" - 總房間數: {room}")
+            print(f" - 定價: {prices}")
+            print(f" - 連絡信箱: {email}")
+            print(f" - 網站連結: {siteurl} \n")
+            return hotel
+        except Exception as e:
+            print("f解析旅館 {hotel_id} 資料頁面異常！")
+            raise e
 
     def _save_workbook(self, county_name: str, hotels_info: List[HotelInfo]):
-        # 寫入 XLS
-        worksheet = self._workbook.add_worksheet(county_name)
-        # 定義標題的數量
-        worksheet.set_column(0, len(self.REQ_COLUMNS) - 1, 20)
-        # 定義格式
-        cell_format = self._workbook.add_format({"bold": True, "bg_color": "#D8F6CE", "font_size": 14})
-        content_format = self._workbook.add_format({"font_size": 12})
-        link_format = self._workbook.add_format({"color": "blue", "underline": 1, "font_size": 12})
-        # 寫入第一列標題
-        worksheet.write_row("A1", self.REQ_COLUMNS, cell_format)
-        # 抓出每一的鄉鎮的所有頁面資料
-        for index, hotel_info in enumerate(hotels_info):
-            hotel_row = (
-                hotel_info.name if hotel_info.name else "",
-                hotel_info.address if hotel_info.address else "",
-                hotel_info.phone if hotel_info.phone else "",
-                "",
-                hotel_info.email if hotel_info.email else "",
-                "",
-                hotel_info.prices if hotel_info.prices else ""
-            )
-            siteurl = hotel_info.siteurl if hotel_info.siteurl else ""
-            room = int(hotel_info.room) if hotel_info.room else 0
-            # 調整 URL
-            pattern = "^http[s]://"
-            # 如果沒有包含，則加工
-            if siteurl and re.search(pattern, siteurl) is None:
-                siteurl = "http://" + siteurl
-            worksheet.write_row(index + 1, 0, hotel_row, content_format)
-            # 用數值格式，寫入房間數
-            worksheet.write_number(index + 1, 5, room, content_format)
-            # 另外採用網址形式
-            worksheet.write_url(index + 1, 3, siteurl, link_format)
+        """
+        保存旅館資料到 Excel 中
+        Args:
+            county_name (str): 市區鄉鎮名
+            hotels_info (List[HotelInfo]): 傳入的旅館資料集
+        """
+        try:
+            # 寫入 XLS
+            worksheet = self._workbook.add_worksheet(county_name)
+            # 定義標題的數量
+            worksheet.set_column(0, len(self.REQ_COLUMNS) - 1, 20)
+            # 定義格式
+            cell_format = self._workbook.add_format({"bold": True, "bg_color": "#D8F6CE", "font_size": 14})
+            content_format = self._workbook.add_format({"font_size": 12})
+            link_format = self._workbook.add_format({"color": "blue", "underline": 1, "font_size": 12})
+            # 寫入第一列標題
+            worksheet.write_row("A1", self.REQ_COLUMNS, cell_format)
+            # 抓出每一的鄉鎮的所有頁面資料
+            for index, hotel_info in enumerate(hotels_info):
+                hotel_row = (
+                    hotel_info.name if hotel_info.name else "",
+                    hotel_info.address if hotel_info.address else "",
+                    hotel_info.phone if hotel_info.phone else "",
+                    "",
+                    hotel_info.email if hotel_info.email else "",
+                    "",
+                    hotel_info.prices if hotel_info.prices else ""
+                )
+                siteurl = hotel_info.siteurl if hotel_info.siteurl else ""
+                room = int(hotel_info.room) if hotel_info.room else 0
+                # 調整 URL
+                pattern = "^http[s]://"
+                # 如果沒有包含，則加工
+                if siteurl and re.search(pattern, siteurl) is None:
+                    siteurl = "http://" + siteurl
+                worksheet.write_row(index + 1, 0, hotel_row, content_format)
+                # 用數值格式，寫入房間數
+                worksheet.write_number(index + 1, 5, room, content_format)
+                # 另外採用網址形式
+                worksheet.write_url(index + 1, 3, siteurl, link_format)
+        except Exception as e:
+            print("寫入 Workbook 異常！")
+            raise e
 
     def start_parsing(self) -> Workbook:
         # 先對每一個城市爬蟲個鄉鎮
-        city = self.CITIES_CODE[self._selected_code]
-
-        counties: List[CountyOption] = self._get_selected_city_counties(city)
-        for county in counties:
-            html_content = self._get_html_content_of_county(city, county)
-            total: TotalPageOfCounty = self._get_total_page_of_county(html_content)
-            print(f"==== 開始抓取城市: {city} {county.name}, 共有 {total.pages} 頁，{total.num_of_hotels} 筆 ====")
-            hotels_of_county: List[HotelInfo] = self._get_hotels_of_pages(total.pages)
-            print(f"寫入 {county.name} 資料....")
-            self._save_workbook(county.name, hotels_of_county)
-        self._workbook.close()
-        return self._workbook
+        try:
+            city = self.CITIES_CODE[self._selected_code]
+            counties: List[CountyOption] = self._get_selected_city_counties(city)
+            for county in counties:
+                html_content = self._get_html_content_of_county(city, county)
+                total: TotalPageOfCounty = self._get_total_page_of_county(html_content)
+                print(f"==== 開始抓取城市: {city} {county.name}, 共有 {total.pages} 頁，{total.num_of_hotels} 筆 ====")
+                hotels_of_county: List[HotelInfo] = self._get_hotels_of_pages(total.pages)
+                print(f"寫入 {county.name} 資料至 Excel ....")
+                self._save_workbook(county.name, hotels_of_county)
+                print(f"#### 完成爬取 {county.name} 的旅館資料 ... !")
+            return self._workbook
+        except Exception as e:
+            raise e
+        finally:
+            self._workbook.close()
