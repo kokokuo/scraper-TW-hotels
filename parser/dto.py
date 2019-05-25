@@ -30,6 +30,7 @@ class HotelInfo(object):
     """
     爬取的旅館資訊
     Args:
+        data_id (int): 資料的 id
         name (str): 旅館名稱
         phone (str): 聯絡電話
         address (str): 地址
@@ -38,6 +39,7 @@ class HotelInfo(object):
         email (str): 信箱
         siteurl (str): 網站連結
     """
+    data_id: int
     name: str
     phone: Optional[str] = None
     address: Optional[str] = None
