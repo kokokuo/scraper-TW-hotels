@@ -26,9 +26,9 @@ class TaiwanHotelParserAgent(object):
         HotelField.Phone,
         HotelField.Email,
         HotelField.Rooms,
-        HotelField.Prices
+        HotelField.Prices,
+        HotelField.Url
     ]
-    # REQ_COLUMNS = [u"旅宿民稱", u"地址", u"訂房專線", u"網址", u"電子信箱", u"總房間數", u"定價"]
     WEBSITE_URL = "https://taiwanstay.net.tw"
     SEARCH_ROUNTE = "/tourism_web/search.php"
     HOTEL_PAGE_ROUTE = "/tourism_web/hotel_content.php"
@@ -204,8 +204,6 @@ class TaiwanHotelParserAgent(object):
                 resp = self.retryable_requests(self.SEARCH_URL,
                                                self._payload,
                                                headers=self._gen_fake_header())
-                # 使用相同的 Header 與 Cookie 狀態嘗試避開 sysytem_abnormal 狀態
-                # req_session = self._build_req_session(headers, resp.cookies)
                 hotels_id: List[int] = self._get_hotels_id_of_current_page(page, resp.content)
                 hotels = self._retrieve_hotels_of_current_page(hotels_id)
                 hotels_of_pages.extend(hotels)
@@ -324,7 +322,7 @@ class TaiwanHotelParserAgent(object):
         except Exception as e:
             print(" ！ 寫入 Excel 異常 ！ ")
             raise e
-   
+
     def start_parsing(self) -> ExcelStore:
         # 先對每一個城市爬蟲個鄉鎮
         try:
