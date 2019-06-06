@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import xlsxwriter
 from parser.agent import TaiwanHotelParserAgent
+from store.excel import ExcelStore
 
 
 def main():
@@ -22,8 +23,10 @@ def main():
         exit()
 
     # 保存要抓取的縣市 xlsx 名稱
-    workbook = xlsxwriter.Workbook(taiwan_cities_code[city_code] + "所有旅宿統計資料.xlsx")
-    hotel_parser = TaiwanHotelParserAgent(city_code, workbook)
+    filename = taiwan_cities_code[city_code] + "所有旅宿統計資料.xlsx"
+    excelstore = ExcelStore(filename)
+    # workbook = xlsxwriter.Workbook(taiwan_cities_code[city_code] + "所有旅宿統計資料.xlsx")
+    hotel_parser = TaiwanHotelParserAgent(city_code, excelstore)
     hotel_parser.start_parsing()
 
 
