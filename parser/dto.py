@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Dict
+from enum import Enum
 
 
 @dataclass
@@ -25,25 +26,15 @@ class TotalPageOfCounty(object):
     num_of_hotels: int
 
 
-@dataclass
-class HotelInfo(object):
-    """
-    爬取的旅館資訊
-    Args:
-        data_id (int): 資料的 id
-        name (str): 旅館名稱
-        phone (str): 聯絡電話
-        address (str): 地址
-        room (int): 房間數
-        prices (str): 價錢範圍
-        email (str): 信箱
-        siteurl (str): 網站連結
-    """
-    data_id: int
-    name: str
-    phone: Optional[str] = None
-    address: Optional[str] = None
-    room: Optional[str] = None
-    prices: Optional[str] = None
-    email: Optional[str] = None
-    siteurl: Optional[str] = None
+class HotelField(Enum):
+    Id = u"旅館ID"
+    Name = u"旅宿民稱"
+    Address = u"地址"
+    Phone = u"訂房專線"
+    Url = u"網址"
+    Email = u"電子信箱"
+    Rooms = u"總房間數"
+    Prices = u"定價"
+
+
+HotelInfo = Dict[HotelField, str]
