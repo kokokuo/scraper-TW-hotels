@@ -1,0 +1,106 @@
+{
+
+    "sync.gist": "bed7ef5936100fff51831cfbd937b35d",
+    "sync.quietSync": false,
+    "sync.askGistName": false,
+    "sync.removeExtensions": true,
+    "sync.syncExtensions": true,
+    "sync.autoDownload": false,
+    "sync.autoUpload": false,
+    "sync.forceDownload": false,
+
+    "window.zoomLevel": 0,
+    // 使用的 vscode 檔案圖示主題
+    "workbench.iconTheme": "material-icon-theme",
+    // 使用的程式碼色彩主題
+    "workbench.colorTheme": "Chromodynamics",
+    // 將您的設定放入此檔案中以覆寫預設值和使用者設定。
+    // 自訂額外隱藏 .pyc
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/*.pyc": true,
+        "**/__pycache__": false
+    },
+    // 不採用 space 採用 tab
+    // "editor.insertSpaces": false,
+    // 關閉 pylint 的一些警告
+    //  "python.linting.pylintArgs": [
+    //     "--disable=W191,E101,E111,W0312,C0303,C0330,C0301",
+    //     "--indent-string=\"\t\""
+    //  ],
+    // Python 直譯器的所在目錄：AutoComplete 與 Debugger
+    // 預設為系統環境，這邊設定為依照虛擬環境
+    "python.pythonPath": ".venv/bin/python",
+    // mypy 程式所在的來源：目前設定在虛擬環境中，預設為會看系統環境有無安裝
+    "python.linting.mypyPath": "${workspaceFolder}/.venv/bin/mypy",
+    // "python.formatting.formatOnSave": false,
+    "editor.renderWhitespace": "boundary",
+    // todohighlight 已不需要，由 Archor 擴充功能提供
+    // "todohighlight.isEnable": true,
+
+    "editor.minimap.enabled": false,
+    // 是否使用 flake8 (包含 pyflake8, pep8, mccabe)
+    "python.linting.flake8Enabled": true,
+    // 是否使用 mypy
+    "python.linting.mypyEnabled": true,
+    // 關閉預設的 pylint
+    "python.linting.pylintEnabled": false,
+    "python.linting.ignorePatterns": [
+        ".vscode/*.py",
+        "**/site-packages/**/*.py",
+        "env/*"
+    ],
+    // 設定 flake8 的 ignore 參數
+    "python.linting.flake8Args": [
+        "--ignore=E501,F401,F403,F405,F841,E502"
+    ],
+    // 採用 Google 的開源工具 YAPF 做自動格式化
+    // "python.formatting.provider": "yapf",
+    // // 儲存時自動格式化
+    // "editor.formatOnSave": true,
+
+    // Now Work
+    // "python.formatting.yapfArgs": [
+    //     "--style",
+    //     "{ALLOW_SPLIT_BEFORE_DICT_VALUE:false, ALLOW_MULTILINE_DICTIONARY_KEYS: false, INDENT_DICTIONARY_VALUE:false, ALLOW_SPLIT_BEFORE_DICT_VALUE:false, SPLIT_BEFORE_CLOSING_BRACKET:false, SPLIT_BEFORE_NAMED_ASSIGNS:false, SPLIT_ALL_COMMA_SEPARATED_VALUES:true}"
+    // ],
+    "autoDocstring.docstringFormat": "google",
+    "line-counter.excludes": [
+        "**/.vscode/**",
+        "**/env/**",
+        "**/.cache/**",
+        "**/migrations/**",
+        "**/postman/**",
+        "**/.gitignore/**",
+        "**/.editorcinfig/**",
+        "**/*.rdb/**",
+        "**/uc2_redis.conf/**"
+    ],
+    "markdown.extension.toc.githubCompatibility": true,
+    "breadcrumbs.enabled": true,
+    "git.enableSmartCommit": true,
+    "vs-kubernetes": {
+        "vs-kubernetes.helm-path": "/Users/koko/.vs-kubernetes/tools/helm/darwin-amd64/helm",
+        "vs-kubernetes.draft-path": "/Users/koko/.vs-kubernetes/tools/draft/darwin-amd64/draft"
+    },
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pyTestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pyTestPath": "${workspaceFolder}/.venv/bin/pytest",
+    "python.testing.pyTestArgs": [
+        "--disable-warnings",
+    ],
+    "commentAnchors.workspace.excludeFiles": "**/{node_modules,.git,.idea,target,out,build,vendor,.venv}/**/*",
+    "editor.renderIndentGuides": false,
+    "guides.active.color.dark": "rgba(255, 255, 255, 1)",
+    "[html]": {
+        "editor.defaultFormatter": "HookyQR.beautify"
+    },
+    "editor.suggestSelection": "first",
+    "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+    "python.jediEnabled": false,
+}
