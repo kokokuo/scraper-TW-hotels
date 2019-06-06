@@ -9,7 +9,7 @@
     "sync.autoUpload": false,
     "sync.forceDownload": false,
 
-    "window.zoomLevel": 0,
+    "window.zoomLevel": -1,
     // 使用的 vscode 檔案圖示主題
     "workbench.iconTheme": "material-icon-theme",
     // 使用的程式碼色彩主題
