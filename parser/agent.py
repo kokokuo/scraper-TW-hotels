@@ -155,6 +155,7 @@ class TaiwanHotelParserAgent(object):
                            cookies: Optional[RequestsCookieJar] = None) -> Response:
         try:
             resp = requests.get(url, params=payload, headers=headers, cookies=cookies)
+            print(f"Response Cookies: {resp.cookies}")
             self._check_does_normal_resp(resp)
             return resp
         except ReqSysAbnoramlError as rse:
@@ -221,9 +222,10 @@ class TaiwanHotelParserAgent(object):
             List[int]: 該頁面的所有旅館 id
         """
         try:
-            hotelstree = etree.HTML(html)
             # 透過 /@href 語法直接取得連結屬性
-            hotel_links = hotelstree.xpath("//*[@id='searchpage']/div/div/div[3]/div/div/a/@href")
+            hotel_links_xpath = "//*[@id='searchpage']/div/div/div[3]/div/div/a/@href"
+            hotelstree = etree.HTML(html)
+            hotel_links = hotelstree.xpath(hotel_links_xpath)
             hotels_id = [link.split("hotel_id=")[1] for link in hotel_links]
             return hotels_id
         except Exception as e:
@@ -261,50 +263,48 @@ class TaiwanHotelParserAgent(object):
             resp = self.retryable_requests(self.HOTEL_PAGE_URL,
                                            payload,
                                            headers=self._gen_fake_header())
-            print(f"_retrieve_hotel_info_by_id -> Cookies: {resp.cookies}")
+            parsed = {}
+            parsing_xpath = {
+                HotelField.Name: "//*[@id='right-hotel']/h2/text()",
+                HotelField.Address: "//*[@id='right-hotel']/div[4]/div[2]/p/span[2]/text()",
+                HotelField.Phone: "//*[@id='tel_div']/p/span[2]/text()",
+                HotelField.Email: "//*[@id='email_div']/a/p/span[2]/text()",
+                HotelField.Rooms: "//*[@id='right-hotel']/div[5]/div[2]/p/span[2]/text()",
+                HotelField.Prices: "//*[@id='right-hotel']/div[5]/div[3]/p/span[2]/text()",
+                HotelField.Url: "//*[@id='website_div']/p/span[2]/a"
+            }
+            retreived_func = {
+                HotelField.Name: lambda elems: elems[0] if elems else None,
+                HotelField.Address: lambda elems: elems[0] if elems else None,
+                HotelField.Phone: lambda elems: elems[0] if elems else None,
+                HotelField.Email: lambda elems: elems[0] if elems else None,
+                HotelField.Rooms: lambda elems: elems[0] if elems else None,
+                HotelField.Prices: lambda elems: elems[0] if elems else None,
+                HotelField.Url: lambda elems: elems[0].get("href") if elems and elems[0].get("href") else None
+            }
             hoteltree = etree.HTML(resp.content)
-            # 旅館名稱
-            name_elem = hoteltree.xpath("//*[@id='right-hotel']/h2/text()")
-            name = name_elem[0] if name_elem else None
-            # 訂房專線
-            phone_elem = hoteltree.xpath("//*[@id='tel_div']/p/span[2]/text()")
-            phone = phone_elem[0] if phone_elem else None
-            # 旅館地址
-            address_elem = hoteltree.xpath("//*[@id='right-hotel']/div[4]/div[2]/p/span[2]/text()")
-            address = address_elem[0] if address_elem else None
-            # 房間總數
-            room_elem = hoteltree.xpath("//*[@id='right-hotel']/div[5]/div[2]/p/span[2]/text()")
-            room = room_elem[0] if room_elem else None
-            # 定價
-            prices_elem = hoteltree.xpath("//*[@id='right-hotel']/div[5]/div[3]/p/span[2]/text()")
-            prices = prices_elem[0] if prices_elem else None
-            # 連絡信箱
-            email_elem = hoteltree.xpath("//*[@id='email_div']/a/p/span[2]/text()")
-            email = email_elem[0] if email_elem else None
-            # 透過 XPath 取得網站連結
-            siteurl_elem = hoteltree.xpath("//*[@id='website_div']/p/span[2]/a")
-            siteurl = siteurl_elem[0].get("href") if siteurl_elem and siteurl_elem[0].get("href") else None
+            for field, xpath in parsing_xpath.items():
+                parsed[field] = retreived_func[field](hoteltree.xpath(xpath))
 
             hotel = {
                 HotelField.Id: str(hotel_id),
-                HotelField.Name: name,
-                HotelField.Phone: phone,
-                HotelField.Address: address,
-                HotelField.Rooms: room,
-                HotelField.Prices: prices,
-                HotelField.Email: email,
-                HotelField.Url: siteurl,
+                HotelField.Name: parsed[HotelField.Name],
+                HotelField.Phone: parsed[HotelField.Phone],
+                HotelField.Address: parsed[HotelField.Address],
+                HotelField.Rooms: parsed[HotelField.Rooms],
+                HotelField.Prices: parsed[HotelField.Phone],
+                HotelField.Email: parsed[HotelField.Email],
+                HotelField.Url: parsed[HotelField.Url],
             }
-            # hotel = HotelInfo(hotel_id, name, phone, address, room, prices, email, siteurl)
             print(f"------------- 完成爬取，旅館資料 -------------------------")
             print(f" - id: {hotel_id}")
-            print(f" - 名稱: {name}")
-            print(f" - 訂房電話： {phone}")
-            print(f" - 地址: {address}")
-            print(f" - 總房間數: {room}")
-            print(f" - 定價: {prices}")
-            print(f" - 連絡信箱: {email}")
-            print(f" - 網站連結: {siteurl} \n")
+            print(f" - 名稱: {parsed[HotelField.Name]}")
+            print(f" - 訂房電話： {parsed[HotelField.Phone]}")
+            print(f" - 地址: {parsed[HotelField.Address]}")
+            print(f" - 總房間數: {parsed[HotelField.Rooms]}")
+            print(f" - 定價: {parsed[HotelField.Phone]}")
+            print(f" - 連絡信箱: {parsed[HotelField.Email]}")
+            print(f" - 網站連結: {parsed[HotelField.Url]} \n")
             return hotel
         except Exception as e:
             print(f"解析旅館 {hotel_id} 的資訊頁面異常！")

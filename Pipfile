@@ -16,6 +16,7 @@ selenium = "*"
 fake-useragent = "*"
 lxml = "*"
 retry = "*"
+aiohttp = "*"
 
 [requires]
 python_version = "3.7"
