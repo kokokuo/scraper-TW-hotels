@@ -2,7 +2,7 @@ import re
 from typing import Optional, List
 from xlsxwriter import Workbook
 from xlsxwriter.worksheet import Worksheet
-from parser.dto import HotelInfo, HotelField
+from apps.dto.hotel import HotelInfo, HotelField
 
 
 class ExcelStore(object):
