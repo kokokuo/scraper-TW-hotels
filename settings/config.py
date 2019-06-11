@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from typing import List
-from parser.dto import HotelField
+from apps.dto.hotel import HotelField
 
 
-class TaiwanHotelConfig(object):
+class Config(object):
     WEBSITE_URL = "https://taiwanstay.net.tw"
     CITIES_CODE = {
         "F": "新北市", "A": "臺北市", "H": "桃園市", "B": "臺中市", "R": "臺南市",
