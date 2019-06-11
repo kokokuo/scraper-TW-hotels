@@ -3,12 +3,16 @@ import re
 import random
 import time
 import logging
+import asyncio
+import aiohttp
+from urllib import parse
+from http.cookies import SimpleCookie
+from types import CoroutineType
 from typing import List, Dict, MutableMapping, Optional
-import requests
-from requests import Session, Response
-from requests.cookies import RequestsCookieJar
+from yarl import URL
 from lxml import etree
-from retry import retry
+from tenacity import retry
+from tenacity import retry_if_exception_type, stop_after_attempt, wait_fixed
 from .excepts import ReqSysAbnoramlError
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
@@ -16,51 +20,29 @@ from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import Select
 from store.excel import ExcelStore
-from .dto import CountyOption, TotalPageOfCounty, HotelInfo, HotelField
+from .dto import CountyOption, TotalPageOfCounty, HotelInfo, HotelField, SyncHttpResponse
+from .settings import TaiwanHotelConfig
 
 
 class TaiwanHotelParserAgent(object):
-    PARSED_COLUMNS = [
-        HotelField.Name,
-        HotelField.Address,
-        HotelField.Phone,
-        HotelField.Email,
-        HotelField.Rooms,
-        HotelField.Prices,
-        HotelField.Url
-    ]
-    WEBSITE_URL = "https://taiwanstay.net.tw"
-    SEARCH_ROUNTE = "/tourism_web/search.php"
-    HOTEL_PAGE_ROUTE = "/tourism_web/hotel_content.php"
-    ABNORMAL_ROUTE = "/system_abnormal.php"
-    SEARCH_URL = WEBSITE_URL + SEARCH_ROUNTE
-    HOTEL_PAGE_URL = WEBSITE_URL + HOTEL_PAGE_ROUTE
-    ABNORMAL_URL = WEBSITE_URL + ABNORMAL_ROUTE
-    CITIES_CODE = {
-        "F": "新北市", "A": "臺北市", "H": "桃園市", "B": "臺中市", "R": "臺南市",
-        "S": "高雄市", "G": "宜蘭縣", "J": "新竹縣", "K": "苗栗縣", "N": "彰化縣",
-        "M": "南投縣", "P": "雲林縣", "Q": "嘉義縣", "T": "屏東縣", "V": "臺東縣",
-        "U": "花蓮縣", "X": "澎湖縣", "C": "基隆市", "O": "新竹市", "I": "嘉義市",
-        "W": "金門縣", "Z": "連江縣"
-    }
 
-    def __init__(self, selected_code: str, excelstore: ExcelStore) -> None:
+    def __init__(self, selected_code: str) -> None:
+        self._config = TaiwanHotelConfig
         self._selected_code: str = selected_code
-        self._payload: dict = {
+        self._params: dict = {
             "page": 1,
-            "sortBy": None,
-            "act": None,
+            "sortBy": "",
+            "act": "",
             "sel_hotel[]": [1, 2, 3],
-            "sel_keyword": None,
-            "sel_city": None,
-            "sel_keyword": None,
-            "sel_city": None,
-            "sel_area": None,
-            "sel_price": None,
-            "sel_room_num": None,
-            "sel_type": None,
+            "sel_keyword": "",
+            "sel_city": "",
+            "sel_keyword": "",
+            "sel_city": "",
+            "sel_area": "",
+            "sel_price": "",
+            "sel_room_num": "",
+            "sel_type": "",
         }
-        self._excelstore = excelstore
 
     def _get_selected_city_counties(self, city_name: str) -> List[CountyOption]:
         """
@@ -72,7 +54,7 @@ class TaiwanHotelParserAgent(object):
         # 不開啟 Browser 的 GUI
         options.headless = True
         driver = webdriver.Chrome(chrome_options=options)
-        driver.get(self.WEBSITE_URL)
+        driver.get(self._config.WEBSITE_URL)
         selector: Select = Select(driver.find_element_by_xpath("//*[@id='sel_city']"))
         selector.select_by_value(city_name)
         counties_options = driver.find_elements_by_xpath("//*[@id='sel_area']/option")
@@ -112,21 +94,7 @@ class TaiwanHotelParserAgent(object):
         print("產生的 Fake Header: {}".format(header["User-Agent"]))
         return header
 
-    def _build_req_session(self, headers: dict, cookies: RequestsCookieJar):
-        """
-        建立請求用的 Session 以保持在不同的請求保持相同的紀錄
-        Args:
-            headers (dict): 要建立 Request Session 用的 Headers
-            cookies (dict): 要建立 Request Session 用的 Cookies
-        Returns:
-            Session: 回傳 Requests 建立的 Session
-        """
-        req_session = Session()
-        req_session.headers = headers
-        req_session.cookies = cookies
-        return req_session
-
-    def _delay_continue(self, min: float, max: float) -> float:
+    async def _delay_continue(self, min: float, max: float) -> float:
         """
         延遲並繼續，為了並免請求的次數之間時間過近，透過給予時間的範圍，隨機生成延遲的時間並於完成等待後繼續執行
         Args:
@@ -137,34 +105,44 @@ class TaiwanHotelParserAgent(object):
         """
         # 隨機產生在 1 - 2 的福點數時間範圍，並格式化成小數點兩位
         rand_sec = float("{:.2f}".format(random.uniform(1.5, 2.2)))
-        time.sleep(rand_sec)
+        await asyncio.sleep(rand_sec)
         return rand_sec
 
-    def _check_does_normal_resp(self, resp: Response) -> bool:
-        if resp.url == self.ABNORMAL_URL:
-            lxmltree = etree.HTML(resp.content)
+    async def _check_does_normal_resp(self, resp: SyncHttpResponse) -> bool:
+        if resp.url == self._config.ABNORMAL_URL:
+            lxmltree = etree.HTML(resp.raw_content)
             content = etree.tostring(lxmltree, method='html', pretty_print=True).decode('utf-8')
             raise ReqSysAbnoramlError(resp.status_code, "解析旅館資料異常！皆為 None", resp.url, content)
         return True
 
-    @retry(exceptions=ReqSysAbnoramlError, tries=3, delay=5)
-    def retryable_requests(self,
-                           url: str,
-                           payload: dict,
-                           headers: Optional[dict] = None,
-                           cookies: Optional[RequestsCookieJar] = None) -> Response:
+    @retry(stop=stop_after_attempt(3),
+           wait=wait_fixed(5),
+           retry=retry_if_exception_type(ReqSysAbnoramlError))
+    async def retryable_requests(self,
+                                 url: str,
+                                 params: dict,
+                                 headers: Optional[dict] = None,
+                                 cookies: Optional[dict] = None) -> SyncHttpResponse:
         try:
-            resp = requests.get(url, params=payload, headers=headers, cookies=cookies)
-            print(f"Response Cookies: {resp.cookies}")
-            self._check_does_normal_resp(resp)
-            return resp
+            encoded_params = parse.urlencode(params)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=encoded_params, headers=headers, cookies=cookies) as resp:
+                    sync_resp = SyncHttpResponse(await resp.read(),
+                                                 await resp.text(),
+                                                 resp.status,
+                                                 resp.headers,
+                                                 resp.cookies,
+                                                 resp.url.human_repr())
+                    print(f"Response Cookies: {sync_resp.cookies}")
+                    await self._check_does_normal_resp(sync_resp)
+            return sync_resp
         except ReqSysAbnoramlError as rse:
             print(f" ！ 網站異常 ！ #########################################")
-            print(f">> 請求網址: {url}, payload: {payload}, headers: {headers}, cookies: {cookies}")
+            print(f">> 請求網址: {url}, params: {params}, headers: {headers}, cookies: {cookies}")
             print(f">> 回應網址：{rse.url}, 頁面狀態碼： {rse.http_code}\n" + rse.content)
             raise rse
 
-    def _get_total_page_of_county(self, city: str, county: CountyOption) -> TotalPageOfCounty:
+    async def _get_total_page_of_county(self, city: str, county: CountyOption) -> TotalPageOfCounty:
         """
         取得指定的縣市與下的特定市區鄉鎮的旅館頁面總頁數
         Args:
@@ -174,12 +152,13 @@ class TaiwanHotelParserAgent(object):
             TotalPageOfCounty: 市區鄉鎮的總頁數 DTO
         """
         try:
-            self._payload["sel_city"] = city
-            self._payload["sel_area"] = county.value
-            resp = self.retryable_requests(self.SEARCH_URL,
-                                           self._payload,
-                                           headers=self._gen_fake_header())
-            soup = BeautifulSoup(resp.content, "html.parser")
+            self._params["sel_city"] = city
+            self._params["sel_area"] = county.value
+            fake_headers = self._gen_fake_header()
+            resp: SyncHttpResponse = await self.retryable_requests(self._config.SEARCH_URL,
+                                                                   self._params,
+                                                                   headers=fake_headers)
+            soup = BeautifulSoup(resp.raw_content, "html.parser")
             page_with_num = soup.find("span", class_="totalbox")
             pages = page_with_num.find_all("span")[0].text
             numbers = page_with_num.find_all("span")[1].text
@@ -188,7 +167,7 @@ class TaiwanHotelParserAgent(object):
             print(f"取得所有頁數時異常！")
             raise e
 
-    def _get_hotels_of_pages(self, pages: int) -> List[HotelInfo]:
+    async def _get_hotels_of_pages(self, pages: int) -> List[HotelInfo]:
         """
         取得該市區鄉鎮的所有頁面下總旅館資料
         Args:
@@ -201,12 +180,13 @@ class TaiwanHotelParserAgent(object):
             hotels_of_pages = []
             for page in range(1, pages + 1):
                 print(f"#### 開始第 {page} 頁 ################################")
-                self._payload["page"] = page
-                resp = self.retryable_requests(self.SEARCH_URL,
-                                               self._payload,
-                                               headers=self._gen_fake_header())
-                hotels_id: List[int] = self._get_hotels_id_of_current_page(page, resp.content)
-                hotels = self._retrieve_hotels_of_current_page(hotels_id)
+                self._params["page"] = page
+                fake_headers = self._gen_fake_header()
+                resp: SyncHttpResponse = await self.retryable_requests(self._config.SEARCH_URL,
+                                                                       self._params,
+                                                                       headers=fake_headers)
+                hotels_id: List[int] = self._get_hotels_id_of_current_page(page, resp.raw_content)
+                hotels = await self._retrieve_hotels_of_current_page(hotels_id)
                 hotels_of_pages.extend(hotels)
             return hotels_of_pages
         except Exception as e:
@@ -232,7 +212,7 @@ class TaiwanHotelParserAgent(object):
             print(f"解析第 {page} 頁的所有旅館訪問連結取得 id 時異常 ！")
             raise e
 
-    def _retrieve_hotels_of_current_page(self, hotels_id: List[int]) -> List[HotelInfo]:
+    async def _retrieve_hotels_of_current_page(self, hotels_id: List[int]) -> List[HotelInfo]:
         """
         透過該頁面下的所有旅館 id 取得旅館資料
         Args:
@@ -244,13 +224,25 @@ class TaiwanHotelParserAgent(object):
         hotels = []
         for index, hotel_id in enumerate(hotels_id):
             # 隨機產生在 1.5 - 2.2 之間的延遲
-            delay = self._delay_continue(1.5, 2.2)
-            print(f"開始爬取旅館 => 索引：{index}, ID: {hotel_id}, 隨機延遲時間為: {delay} secs")
-            hotel = self._retrieve_hotel_info_by_id(hotel_id)
+            # delay = self._delay_continue(0.5, 1.5)
+            # print(f"開始爬取旅館 => 索引：{index}, ID: {hotel_id}, 隨機延遲時間為: {delay} secs")
+            print(f"開始爬取旅館 => 索引：{index}, ID: {hotel_id}")
+            hotel = await self._retrieve_hotel_info_by_id(hotel_id)
             hotels.append(hotel)
         return hotels
 
-    def _retrieve_hotel_info_by_id(self, hotel_id: int) -> HotelInfo:
+    async def _show_hotel(self, hotel: HotelInfo):
+        print(f"------------- 完成爬取，旅館資料 -------------------------")
+        print(f" - {HotelField.Id.value}: {hotel[HotelField.Id]}")
+        print(f" - {HotelField.Name.value}: {hotel[HotelField.Name]}")
+        print(f" - {HotelField.Phone.value}: {hotel[HotelField.Phone]}")
+        print(f" - {HotelField.Address.value}: {hotel[HotelField.Address]}")
+        print(f" - {HotelField.Rooms.value}: {hotel[HotelField.Rooms]}")
+        print(f" - {HotelField.Prices.value}: {hotel[HotelField.Prices]}")
+        print(f" - {HotelField.Email.value}: {hotel[HotelField.Email]}")
+        print(f" - {HotelField.Url.value}: {hotel[HotelField.Url]} \n")
+
+    async def _retrieve_hotel_info_by_id(self, hotel_id: int) -> HotelInfo:
         """
         透過訪問旅館資料的 id 取得該旅館頁面下的旅館相關資訊
         Args:
@@ -259,10 +251,11 @@ class TaiwanHotelParserAgent(object):
             HotelInfo: 該旅館資料
         """
         try:
-            payload = {"hotel_id": hotel_id}
-            resp = self.retryable_requests(self.HOTEL_PAGE_URL,
-                                           payload,
-                                           headers=self._gen_fake_header())
+            params = {"hotel_id": hotel_id}
+            fake_headers = self._gen_fake_header()
+            resp: SyncHttpResponse = await self.retryable_requests(self._config.HOTEL_PAGE_URL,
+                                                                   params,
+                                                                   headers=fake_headers)
             parsed = {}
             parsing_xpath = {
                 HotelField.Name: "//*[@id='right-hotel']/h2/text()",
@@ -282,7 +275,7 @@ class TaiwanHotelParserAgent(object):
                 HotelField.Prices: lambda elems: elems[0] if elems else None,
                 HotelField.Url: lambda elems: elems[0].get("href") if elems and elems[0].get("href") else None
             }
-            hoteltree = etree.HTML(resp.content)
+            hoteltree = etree.HTML(resp.raw_content)
             for field, xpath in parsing_xpath.items():
                 parsed[field] = retreived_func[field](hoteltree.xpath(xpath))
 
@@ -296,47 +289,49 @@ class TaiwanHotelParserAgent(object):
                 HotelField.Email: parsed[HotelField.Email],
                 HotelField.Url: parsed[HotelField.Url],
             }
-            print(f"------------- 完成爬取，旅館資料 -------------------------")
-            print(f" - id: {hotel_id}")
-            print(f" - 名稱: {parsed[HotelField.Name]}")
-            print(f" - 訂房電話： {parsed[HotelField.Phone]}")
-            print(f" - 地址: {parsed[HotelField.Address]}")
-            print(f" - 總房間數: {parsed[HotelField.Rooms]}")
-            print(f" - 定價: {parsed[HotelField.Phone]}")
-            print(f" - 連絡信箱: {parsed[HotelField.Email]}")
-            print(f" - 網站連結: {parsed[HotelField.Url]} \n")
+            await self._show_hotel(hotel)
             return hotel
         except Exception as e:
             print(f"解析旅館 {hotel_id} 的資訊頁面異常！")
             raise e
 
-    def _store_excel(self, county_name: str, hotels: List[HotelInfo]):
+    async def _store_excel(self, county_name: str, hotels: List[HotelInfo], excel: ExcelStore):
         try:
             # 新增此市區鄉鎮的 Sheet
-            sheet = self._excelstore.add_sheet(county_name, self.PARSED_COLUMNS)
+            sheet = excel.add_sheet(county_name, self._config.PARSED_COLUMNS)
+            print(f"寫入 {county_name} 資料至 Excel ....")
             # 抓出每一的鄉鎮的所有頁面資料
             for idx, hotel in enumerate(hotels):
-                # 第 0 列為 Header
-                row = idx + 1
-                self._excelstore.store_hotel(sheet, row, self.PARSED_COLUMNS, hotel)
+                # 第 0 列為 Header，所以 idx 需要 + 1
+                excel.store_hotel(sheet, idx + 1, self._config.PARSED_COLUMNS, hotel)
+            print(f"#### 完成寫入 {county_name} 的旅館資料 ... !")
         except Exception as e:
             print(" ！ 寫入 Excel 異常 ！ ")
             raise e
 
-    def start_parsing(self) -> ExcelStore:
+    async def _get_hotels_of_county(self, city: str, county: CountyOption) -> List[HotelInfo]:
+        total: TotalPageOfCounty = await self._get_total_page_of_county(city, county)
+        print(f"==== 開始抓取城市: {city} {county.name}, 共有 {total.pages} 頁，{total.num_of_hotels} 筆 ====")
+        hotels_of_county: List[HotelInfo] = await self._get_hotels_of_pages(total.pages)
+        return hotels_of_county
+
+    async def _retrieve_counties_hotels(self,
+                                        city: str,
+                                        counties: List[CountyOption],
+                                        excel: ExcelStore) -> ExcelStore:
+        for county in counties:
+            hotels_of_county = await self._get_hotels_of_county(city, county)
+            await self._store_excel(county.name, hotels_of_county, excel)
+        return excel
+
+    def parsing(self, excel: ExcelStore) -> ExcelStore:
         # 先對每一個城市爬蟲個鄉鎮
         try:
-            city = self.CITIES_CODE[self._selected_code]
+            city = self._config.CITIES_CODE[self._selected_code]
             counties: List[CountyOption] = self._get_selected_city_counties(city)
-            for county in counties:
-                total: TotalPageOfCounty = self._get_total_page_of_county(city, county)
-                print(f"==== 開始抓取城市: {city} {county.name}, 共有 {total.pages} 頁，{total.num_of_hotels} 筆 ====")
-                hotels_of_county: List[HotelInfo] = self._get_hotels_of_pages(total.pages)
-                print(f"寫入 {county.name} 資料至 Excel ....")
-                self._store_excel(county.name, hotels_of_county)
-                print(f"#### 完成爬取 {county.name} 的旅館資料 ... !")
-            return self._excelstore
+            coroutine = self._retrieve_counties_hotels(city, counties, excel)
+            asyncio.run(coroutine)
         except Exception as e:
             raise e
         finally:
-            self._excelstore.close()
+            excel.close()
