@@ -16,17 +16,17 @@
 
 **<p align="center">「台灣旅宿網」截圖</p>**
 <p align="center">
-  <img src="../master/parsing-capture/TWHotels-MainPage.png?raw=true">
+  <img src="../master/Images/TWHotels-MainPage.png?raw=true">
 </p>
 
 **<p align="center">「台灣旅宿網」旅館列表截圖</p>**
 <p align="center">
-  <img src="../master/parsing-capture/TWHotels-MultiHotelsOfPage.png?raw=true">
+  <img src="../master/Images/TWHotels-MultiHotelsOfPage.png?raw=true">
 </p>
 
 **<p align="center">「台灣旅宿網」資訊頁面截圖</p>**
 <p align="center">
-  <img src="../master/parsing-capture/TWHotels-SingleHotelInfo.png?raw=true">
+  <img src="../master/Images/TWHotels-SingleHotelInfo.png?raw=true">
 </p>
 
 <br/>
@@ -35,17 +35,17 @@
 
 **<p align="center">指令輸入</p>**
 <p align="center">
-  <img src="../master/parsing-capture/run.png?raw=true">
+  <img src="../master/Images/Run.png?raw=true">
 </p>
 
 **<p align="center">執行過程</p>**
 
 <p align="center">
-  <img src="../master/parsing-capture/parsing.png?raw=true">
+  <img src="../master/Images/Parsing.png?raw=true">
 </p>
 
 **<p align="center">Excel 資料 - 金門縣</p>**
 
 <p align="center">
-  <img src="../master/parsing-capture/save-excel.png?raw=true">
+  <img src="../master/Images/SaveExcel.png?raw=true">
 </p>
