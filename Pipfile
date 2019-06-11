@@ -13,10 +13,10 @@ requests = "*"
 beautifulsoup4 = "*"
 xlsxwriter = "*"
 selenium = "*"
-fake-useragent = "*"
 lxml = "*"
-retry = "*"
 aiohttp = "*"
+tenacity = "*"
+fake-useragent = "*"
 
 [requires]
 python_version = "3.7"
