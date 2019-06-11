@@ -30,7 +30,7 @@ from .excepts import ReqSysAbnoramlError
 class TaiwanHotelParserAgent(object):
 
     def __init__(self, selected_code: str) -> None:
-        self._config = Config
+        self._conf = Config
         self._selected_code: str = selected_code
         self._params: dict = {
             "page": 1,
@@ -59,7 +59,7 @@ class TaiwanHotelParserAgent(object):
         logger.setLevel(level)
         return logger
 
-    def _get_selected_city_counties(self, city_name: str) -> List[CountyOption]:
+    def find_counties(self, city_name: str) -> List[CountyOption]:
         """
         藉由 Selenium 模擬點擊縣市，取得指定縣市的所有省區資料
         Returns:
@@ -69,7 +69,7 @@ class TaiwanHotelParserAgent(object):
         # 不開啟 Browser 的 GUI
         options.headless = True
         driver = webdriver.Chrome(chrome_options=options)
-        driver.get(self._config.WEBSITE_URL)
+        driver.get(self._conf.WEBSITE_URL)
         selector: Select = Select(driver.find_element_by_xpath("//*[@id='sel_city']"))
         selector.select_by_value(city_name)
         counties_options = driver.find_elements_by_xpath("//*[@id='sel_area']/option")
@@ -124,7 +124,7 @@ class TaiwanHotelParserAgent(object):
         return rand_sec
 
     async def _check_does_normal_resp(self, resp: SyncHttpResponse) -> bool:
-        if resp.url == self._config.ABNORMAL_URL:
+        if resp.url == self._conf.ABNORMAL_URL:
             lxmltree = etree.HTML(resp.raw_content)
             content = etree.tostring(lxmltree, method='html', pretty_print=True).decode('utf-8')
             raise ReqSysAbnoramlError(resp.status_code, "解析旅館資料異常！皆為 None", resp.url, content)
@@ -170,7 +170,7 @@ class TaiwanHotelParserAgent(object):
             self._params["sel_city"] = city
             self._params["sel_area"] = county.value
             fake_headers = await self._gen_fake_header()
-            resp: SyncHttpResponse = await self.retryable_requests(self._config.SEARCH_URL,
+            resp: SyncHttpResponse = await self.retryable_requests(self._conf.SEARCH_URL,
                                                                    self._params,
                                                                    headers=fake_headers)
             soup = BeautifulSoup(resp.raw_content, "html.parser")
@@ -197,7 +197,7 @@ class TaiwanHotelParserAgent(object):
                 self._logger.info(f"#### 開始第 {page} 頁 ################################")
                 self._params["page"] = page
                 fake_headers = await self._gen_fake_header()
-                resp: SyncHttpResponse = await self.retryable_requests(self._config.SEARCH_URL,
+                resp: SyncHttpResponse = await self.retryable_requests(self._conf.SEARCH_URL,
                                                                        self._params,
                                                                        headers=fake_headers)
                 hotels_id: List[int] = self._get_hotels_id_of_current_page(page, resp.raw_content)
@@ -267,7 +267,7 @@ class TaiwanHotelParserAgent(object):
         try:
             params = {"hotel_id": hotel_id}
             fake_headers = await self._gen_fake_header()
-            resp: SyncHttpResponse = await self.retryable_requests(self._config.HOTEL_PAGE_URL,
+            resp: SyncHttpResponse = await self.retryable_requests(self._conf.HOTEL_PAGE_URL,
                                                                    params,
                                                                    headers=fake_headers)
             parsed = {}
@@ -312,12 +312,12 @@ class TaiwanHotelParserAgent(object):
     async def _store_excel(self, county_name: str, hotels: List[HotelInfo], excel: ExcelStore):
         try:
             # 新增此市區鄉鎮的 Sheet
-            sheet = excel.add_sheet(county_name, self._config.PARSED_COLUMNS)
+            sheet = excel.add_sheet(county_name, self._conf.PARSED_COLUMNS)
             self._logger.info(f"寫入 {county_name} 資料至 Excel ....")
             # 抓出每一的鄉鎮的所有頁面資料
             for idx, hotel in enumerate(hotels):
                 # 第 0 列為 Header，所以 idx 需要 + 1
-                excel.store_hotel(sheet, idx + 1, self._config.PARSED_COLUMNS, hotel)
+                excel.store_hotel(sheet, idx + 1, self._conf.PARSED_COLUMNS, hotel)
             self._logger.info(f"#### 完成寫入 {county_name} 的旅館資料 ... !")
         except Exception as e:
             self._logger.error(" ！ 寫入 Excel 異常 ！ ")
@@ -341,8 +341,8 @@ class TaiwanHotelParserAgent(object):
     def parsing(self, excel: ExcelStore) -> ExcelStore:
         # 先對每一個城市爬蟲個鄉鎮
         try:
-            city = self._config.CITIES_CODE[self._selected_code]
-            counties: List[CountyOption] = self._get_selected_city_counties(city)
+            city = self._conf.CITIES_CODE[self._selected_code]
+            counties: List[CountyOption] = self.find_counties(city)
             coroutine = self._retrieve_counties_hotels(city, counties, excel)
             excel = asyncio.run(coroutine)
             return excel
