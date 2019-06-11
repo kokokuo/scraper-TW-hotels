@@ -11,25 +11,26 @@ from urllib import parse
 from http.cookies import SimpleCookie
 from types import CoroutineType
 from typing import List, Dict, MutableMapping, Optional
-from yarl import URL
 from lxml import etree
 from tenacity import retry
 from tenacity import retry_if_exception_type, stop_after_attempt, wait_fixed
-from .excepts import ReqSysAbnoramlError
 from bs4 import BeautifulSoup
 from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import Select
 from store.excel import ExcelStore
-from .dto import CountyOption, TotalPageOfCounty, HotelInfo, HotelField, SyncHttpResponse
-from .settings import TaiwanHotelConfig
+from apps.dto.resp import SyncHttpResponse
+from apps.dto.hotel import HotelInfo, HotelField
+from apps.dto.county import CountyOption, TotalPageOfCounty
+from settings.config import Config
+from .excepts import ReqSysAbnoramlError
 
 
 class TaiwanHotelParserAgent(object):
 
     def __init__(self, selected_code: str) -> None:
-        self._config = TaiwanHotelConfig
+        self._config = Config
         self._selected_code: str = selected_code
         self._params: dict = {
             "page": 1,
