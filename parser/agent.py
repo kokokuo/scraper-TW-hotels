@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
+import os
 import re
 import random
 import time
-import logging
 import asyncio
 import aiohttp
+import logging
+from logging import StreamHandler
 from urllib import parse
 from http.cookies import SimpleCookie
 from types import CoroutineType
@@ -43,6 +45,18 @@ class TaiwanHotelParserAgent(object):
             "sel_room_num": "",
             "sel_type": "",
         }
+        fmt = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        self._logger = self._console_logger(__name__, logging.DEBUG, fmt)
+
+    def _console_logger(self, name: str, level: int, fmt: str):
+        logger = logging.getLogger(name)
+        handler = StreamHandler()
+        handler.setLevel(level)
+        formatter = logging.Formatter(fmt)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(level)
+        return logger
 
     def _get_selected_city_counties(self, city_name: str) -> List[CountyOption]:
         """
@@ -62,10 +76,10 @@ class TaiwanHotelParserAgent(object):
             CountyOption(option.text, option.get_attribute("value"))
             for option in counties_options if option.get_attribute("value")
         ]
-        print(f"完成網頁模擬，選擇縣市: {city_name}，取得「{city_name}」所有的市區鄉鎮")
+        self._logger.info(f"完成網頁模擬，選擇縣市: {city_name}，取得「{city_name}」所有的市區鄉鎮")
         return counties
 
-    def _gen_fake_header(self) -> dict:
+    async def _gen_fake_header(self) -> dict:
         """
         產生訪問網頁用的假 Header
         Returns:
@@ -91,7 +105,7 @@ class TaiwanHotelParserAgent(object):
             "Upgrade-Insecure-Requests": "1",
             "User-Agent": random_ua
         }
-        print("產生的 Fake Header: {}".format(header["User-Agent"]))
+        self._logger.debug("產生的 Fake Header: {}".format(header["User-Agent"]))
         return header
 
     async def _delay_continue(self, min: float, max: float) -> float:
@@ -133,13 +147,13 @@ class TaiwanHotelParserAgent(object):
                                                  resp.headers,
                                                  resp.cookies,
                                                  resp.url.human_repr())
-                    print(f"Response Cookies: {sync_resp.cookies}")
+                    self._logger.debug(f"Response Cookies: {sync_resp.cookies}")
                     await self._check_does_normal_resp(sync_resp)
             return sync_resp
         except ReqSysAbnoramlError as rse:
-            print(f" ！ 網站異常 ！ #########################################")
-            print(f">> 請求網址: {url}, params: {params}, headers: {headers}, cookies: {cookies}")
-            print(f">> 回應網址：{rse.url}, 頁面狀態碼： {rse.http_code}\n" + rse.content)
+            self._logger.error(f" ！ 網站異常 ！ #########################################")
+            self._logger.error(f">> 請求網址: {url}, params: {params}, headers: {headers}, cookies: {cookies}")
+            self._logger.error(f">> 回應網址：{rse.url}, 頁面狀態碼： {rse.http_code}\n" + rse.content)
             raise rse
 
     async def _get_total_page_of_county(self, city: str, county: CountyOption) -> TotalPageOfCounty:
@@ -154,7 +168,7 @@ class TaiwanHotelParserAgent(object):
         try:
             self._params["sel_city"] = city
             self._params["sel_area"] = county.value
-            fake_headers = self._gen_fake_header()
+            fake_headers = await self._gen_fake_header()
             resp: SyncHttpResponse = await self.retryable_requests(self._config.SEARCH_URL,
                                                                    self._params,
                                                                    headers=fake_headers)
@@ -164,7 +178,7 @@ class TaiwanHotelParserAgent(object):
             numbers = page_with_num.find_all("span")[1].text
             return TotalPageOfCounty(int(pages), (numbers))
         except Exception as e:
-            print(f"取得所有頁數時異常！")
+            self._logger.error(f"取得所有頁數時異常！")
             raise e
 
     async def _get_hotels_of_pages(self, pages: int) -> List[HotelInfo]:
@@ -179,9 +193,9 @@ class TaiwanHotelParserAgent(object):
             hotels_class_css = "col-md-12 col-sm-12 nopadding items-container simple-items"
             hotels_of_pages = []
             for page in range(1, pages + 1):
-                print(f"#### 開始第 {page} 頁 ################################")
+                self._logger.info(f"#### 開始第 {page} 頁 ################################")
                 self._params["page"] = page
-                fake_headers = self._gen_fake_header()
+                fake_headers = await self._gen_fake_header()
                 resp: SyncHttpResponse = await self.retryable_requests(self._config.SEARCH_URL,
                                                                        self._params,
                                                                        headers=fake_headers)
@@ -190,7 +204,7 @@ class TaiwanHotelParserAgent(object):
                 hotels_of_pages.extend(hotels)
             return hotels_of_pages
         except Exception as e:
-            print(f"取得 {page} 頁的所有 Hotels 時異常 ！")
+            self._logger(f"取得 {page} 頁的所有 Hotels 時異常 ！")
             raise e
 
     def _get_hotels_id_of_current_page(self, page: int, html: bytes) -> List[int]:
@@ -209,7 +223,7 @@ class TaiwanHotelParserAgent(object):
             hotels_id = [link.split("hotel_id=")[1] for link in hotel_links]
             return hotels_id
         except Exception as e:
-            print(f"解析第 {page} 頁的所有旅館訪問連結取得 id 時異常 ！")
+            self._logger(f"解析第 {page} 頁的所有旅館訪問連結取得 id 時異常 ！")
             raise e
 
     async def _retrieve_hotels_of_current_page(self, hotels_id: List[int]) -> List[HotelInfo]:
@@ -225,22 +239,21 @@ class TaiwanHotelParserAgent(object):
         for index, hotel_id in enumerate(hotels_id):
             # 隨機產生在 1.5 - 2.2 之間的延遲
             # delay = self._delay_continue(0.5, 1.5)
-            # print(f"開始爬取旅館 => 索引：{index}, ID: {hotel_id}, 隨機延遲時間為: {delay} secs")
-            print(f"開始爬取旅館 => 索引：{index}, ID: {hotel_id}")
+            self._logger.info(f"開始爬取旅館 => 索引：{index}, ID: {hotel_id}")
             hotel = await self._retrieve_hotel_info_by_id(hotel_id)
             hotels.append(hotel)
         return hotels
 
     async def _show_hotel(self, hotel: HotelInfo):
-        print(f"------------- 完成爬取，旅館資料 -------------------------")
-        print(f" - {HotelField.Id.value}: {hotel[HotelField.Id]}")
-        print(f" - {HotelField.Name.value}: {hotel[HotelField.Name]}")
-        print(f" - {HotelField.Phone.value}: {hotel[HotelField.Phone]}")
-        print(f" - {HotelField.Address.value}: {hotel[HotelField.Address]}")
-        print(f" - {HotelField.Rooms.value}: {hotel[HotelField.Rooms]}")
-        print(f" - {HotelField.Prices.value}: {hotel[HotelField.Prices]}")
-        print(f" - {HotelField.Email.value}: {hotel[HotelField.Email]}")
-        print(f" - {HotelField.Url.value}: {hotel[HotelField.Url]} \n")
+        self._logger.info(f"------------- 完成爬取，旅館資料 -------------------------")
+        self._logger.info(f" - {HotelField.Id.value}: {hotel[HotelField.Id]}")
+        self._logger.info(f" - {HotelField.Name.value}: {hotel[HotelField.Name]}")
+        self._logger.debug(f" - {HotelField.Phone.value}: {hotel[HotelField.Phone]}")
+        self._logger.debug(f" - {HotelField.Address.value}: {hotel[HotelField.Address]}")
+        self._logger.debug(f" - {HotelField.Rooms.value}: {hotel[HotelField.Rooms]}")
+        self._logger.debug(f" - {HotelField.Prices.value}: {hotel[HotelField.Prices]}")
+        self._logger.debug(f" - {HotelField.Email.value}: {hotel[HotelField.Email]}")
+        self._logger.debug(f" - {HotelField.Url.value}: {hotel[HotelField.Url]} \n")
 
     async def _retrieve_hotel_info_by_id(self, hotel_id: int) -> HotelInfo:
         """
@@ -252,7 +265,7 @@ class TaiwanHotelParserAgent(object):
         """
         try:
             params = {"hotel_id": hotel_id}
-            fake_headers = self._gen_fake_header()
+            fake_headers = await self._gen_fake_header()
             resp: SyncHttpResponse = await self.retryable_requests(self._config.HOTEL_PAGE_URL,
                                                                    params,
                                                                    headers=fake_headers)
@@ -292,26 +305,26 @@ class TaiwanHotelParserAgent(object):
             await self._show_hotel(hotel)
             return hotel
         except Exception as e:
-            print(f"解析旅館 {hotel_id} 的資訊頁面異常！")
+            self._logger.error(f"解析旅館 {hotel_id} 的資訊頁面異常！")
             raise e
 
     async def _store_excel(self, county_name: str, hotels: List[HotelInfo], excel: ExcelStore):
         try:
             # 新增此市區鄉鎮的 Sheet
             sheet = excel.add_sheet(county_name, self._config.PARSED_COLUMNS)
-            print(f"寫入 {county_name} 資料至 Excel ....")
+            self._logger.info(f"寫入 {county_name} 資料至 Excel ....")
             # 抓出每一的鄉鎮的所有頁面資料
             for idx, hotel in enumerate(hotels):
                 # 第 0 列為 Header，所以 idx 需要 + 1
                 excel.store_hotel(sheet, idx + 1, self._config.PARSED_COLUMNS, hotel)
-            print(f"#### 完成寫入 {county_name} 的旅館資料 ... !")
+            self._logger.info(f"#### 完成寫入 {county_name} 的旅館資料 ... !")
         except Exception as e:
-            print(" ！ 寫入 Excel 異常 ！ ")
+            self._logger.error(" ！ 寫入 Excel 異常 ！ ")
             raise e
 
     async def _get_hotels_of_county(self, city: str, county: CountyOption) -> List[HotelInfo]:
         total: TotalPageOfCounty = await self._get_total_page_of_county(city, county)
-        print(f"==== 開始抓取城市: {city} {county.name}, 共有 {total.pages} 頁，{total.num_of_hotels} 筆 ====")
+        self._logger.info(f"==== 開始抓取城市: {city} {county.name}, 共有 {total.pages} 頁，{total.num_of_hotels} 筆 ====")
         hotels_of_county: List[HotelInfo] = await self._get_hotels_of_pages(total.pages)
         return hotels_of_county
 
@@ -330,7 +343,8 @@ class TaiwanHotelParserAgent(object):
             city = self._config.CITIES_CODE[self._selected_code]
             counties: List[CountyOption] = self._get_selected_city_counties(city)
             coroutine = self._retrieve_counties_hotels(city, counties, excel)
-            asyncio.run(coroutine)
+            excel = asyncio.run(coroutine)
+            return excel
         except Exception as e:
             raise e
         finally:

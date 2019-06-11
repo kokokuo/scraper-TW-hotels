@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-import xlsxwriter
+from datetime import datetime
 from parser.agent import TaiwanHotelParserAgent
 from parser.settings import TaiwanHotelConfig
 from store.excel import ExcelStore
 
 
-def main():
+def ask_city():
     print("寫選擇要抓取的資料: ")
     cities_code = TaiwanHotelConfig.CITIES_CODE
     for city_code in cities_code.keys():
@@ -14,13 +14,19 @@ def main():
     if city_code not in cities_code.keys():
         print("不存在此代碼，請重新執行！")
         exit()
+    return city_code
 
+
+def main():
+    city_code = ask_city()
     # 保存要抓取的縣市 xlsx 名稱
-    filename = cities_code[city_code] + "所有旅宿統計資料.xlsx"
+    begin = datetime.now()
+    filename = TaiwanHotelConfig.CITIES_CODE[city_code] + "所有旅宿統計資料.xlsx"
     excelstore = ExcelStore(filename)
-    # workbook = xlsxwriter.Workbook(taiwan_cities_code[city_code] + "所有旅宿統計資料.xlsx")
     hotel_parser = TaiwanHotelParserAgent(city_code)
     hotel_parser.parsing(excelstore)
+    end = datetime.now()
+    print(f" ! Finish - beginning: {begin}, end: {end}, spent: {end - begin}")
 
 
 if __name__ == "__main__":
