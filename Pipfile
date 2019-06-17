@@ -18,6 +18,7 @@ aiohttp = "*"
 tenacity = "*"
 fake-useragent = "*"
 pyyaml = "*"
+colorful = "*"
 
 [requires]
 python_version = "3.7"

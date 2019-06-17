@@ -38,7 +38,7 @@ class SeleniumCountiesSelecor(object):
             CountyVO(option.text, option.get_attribute("value"))
             for option in counties_options if option.get_attribute("value")
         ]
-        self._logger.info(f"完成網頁模擬點擊，取得「{city_name}」所有的市區鄉鎮")
+        self._logger.info(f" [ Extracted ]    完成網頁模擬點擊，取得「{city_name}」所有的市區鄉鎮")
         return counties
 
 

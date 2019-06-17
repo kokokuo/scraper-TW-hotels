@@ -46,7 +46,7 @@ class PagesOfCountyParser(object):
             self._logger.info(f"{city_name} {county.name}, 共有 {pages} 頁，{numbers} 筆")
             return PagesOfHotelVO(int(pages), (numbers))
         except Exception as e:
-            self._logger.error(f" [ ERROR ]     取得所有頁數時異常  ！")
+            self._logger.error(f" [ ERROR ]    取得所有頁數時異常 ！")
             raise e
 
 
@@ -77,7 +77,7 @@ class HotelsOfCountyParser(object):
             hotels_id = [link.split("hotel_id=")[1] for link in hotel_links]
             return hotels_id
         except Exception as e:
-            self._logger.error(f" [ ERROR ]     解析第 {page} 頁的所有旅館訪問連結取得 id 時異常 ！")
+            self._logger.error(f" [ ERROR ]    解析第 {page} 頁的所有旅館訪問連結取得 id 時異常 ！")
             raise e
 
     async def _extract_hotels(self, hotels_id: List[int]) -> List[HotelContentVO]:
@@ -115,7 +115,7 @@ class HotelsOfCountyParser(object):
             self._params["sel_city"] = city_name
             self._params["sel_area"] = county.value
             for page in range(1, pages.total + 1):
-                self._logger.info(f" [ Next Page ]      第 {page} 頁 =====================")
+                self._logger.info(f" [ Next Page ]    第 {page} 頁 =====================")
                 self._params["page"] = page
                 fake_headers = await self._fake_header.generate()
                 resp: SyncHttpResponse = await self._requester.get(self._url,
@@ -126,7 +126,7 @@ class HotelsOfCountyParser(object):
                 hotels_of_pages.extend(hotels)
             return hotels_of_pages
         except Exception as e:
-            self._logger.error(f" [ ERROR ]      取得 {page} 頁的所有 Hotels 時異常 ！ ")
+            self._logger.error(f" [ ERROR ]    取得 {page} 頁的所有 Hotels 時異常 ！ ")
             raise e
 
 
@@ -147,15 +147,15 @@ class HotelContentVOParser(object):
         self._requester = retryable_requester
 
     async def _logging(self, hotel: HotelContentVO):
-        self._logger.info(f" [ OK ]      完成爬取，旅館資料 ----------------")
-        self._logger.info(f"旅館ID : {hotel.id}")
-        self._logger.info(f"旅宿民稱 : {hotel.name}")
-        self._logger.info(f"地址 : {hotel.address}")
-        self._logger.info(f"訂房專線 : {hotel.phone}")
-        self._logger.info(f"網址 : {hotel.url}")
-        self._logger.info(f"電子信箱 : {hotel.email}")
-        self._logger.info(f"總房間數 : {hotel.rooms}")
-        self._logger.info(f"定價 : {hotel.prices} \n")
+        self._logger.info(f" [ OK ]    旅館內容爬取完成 ")
+        self._logger.info(f" [ 旅館 ID ] : {hotel.id}")
+        self._logger.info(f" [ 旅宿民稱 ] : {hotel.name}")
+        self._logger.info(f" [ 地址    ] : {hotel.address}")
+        self._logger.info(f" [ 訂房專線 ]: {hotel.phone}")
+        self._logger.info(f" [ 網址    ]: {hotel.url}")
+        self._logger.info(f" [ 電子信箱 ] : {hotel.email}")
+        self._logger.info(f" [ 總房間數 ] : {hotel.rooms}")
+        self._logger.info(f" [ 定價    ] : {hotel.prices} \n")
 
     async def extract(self, hotel_id: int) -> HotelContentVO:
         """
@@ -196,7 +196,7 @@ class HotelContentVOParser(object):
             await self._logging(hotel)
             return hotel
         except Exception as e:
-            self._logger.error(f" [ ERROR ]      解析旅館 {hotel_id} 的資訊頁面異常 ！")
+            self._logger.error(f" [ ERROR ]    解析旅館 {hotel_id} 的資訊頁面異常 ！")
             raise e
 
 

@@ -5,6 +5,7 @@ from apps.assembler.hotel import HotelFieldRowsAssembler
 from apps.services.scraper import hotels_scraping_service
 from apps.services.storer import hotel_storing_service
 from settings.config import Config
+import colorful
 
 
 def ask_city():
@@ -38,7 +39,8 @@ def main():
     filename = city_name + "所有旅宿統計資料.xlsx"
     asyncio.run(parsing(city_name, filename))
     end = datetime.now()
-    print(f"\n [ Finish ]      beginning: {begin}, end: {end}, spent: {end - begin} \n")
+
+    print(f"\n [ {colorful.bold_green}Finish{colorful.reset} ]    beginning: {begin}, end: {end}, spent: {end - begin} \n")
 
 
 if __name__ == "__main__":

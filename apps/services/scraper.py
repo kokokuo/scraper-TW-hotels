@@ -35,7 +35,7 @@ class TaiwanHotelsScrapingService(object):
             List[HotelContentVO]: 抓取下來的旅館資料列表
         """
         pages: PagesOfHotelVO = await pages_parser.extract(city_name, county)
-        self._logger.info(f" [ Scraping ]       開始抓: {city_name} {county.name} ##########")
+        self._logger.info(f" [ Scraping ]   開始抓: {city_name} {county.name} ##########")
         hotels: List[HotelContentVO] = await hotels_of_county_parser.extract_all(city_name, county, pages)
         return hotels
 

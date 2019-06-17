@@ -21,15 +21,15 @@ class HotelContentVOsStoringService(object):
             excel = ExcelStore(filename, self._logger)
             # 新增此市區鄉鎮的 Sheet
             sheet = excel.add_sheet(county_name, Config.PARSED_COLUMNS)
-            self._logger.info(f" [ Saving ]       寫入 {county_name} 資料至 Excel 中....")
+            self._logger.info(f" [ Saving ]    寫入 {county_name} 資料至 Excel 中....")
             # 抓出每一的鄉鎮的所有頁面資料
             hotel: HotelFieldRow
             for idx, hotel in enumerate(hotels):
                 # 第 0 列為 Header，所以 idx 需要 + 1
                 await excel.store_row(sheet, idx + 1, Config.PARSED_COLUMNS, hotel)
-            self._logger.info(f" [ Saved ]      寫入 {county_name} 的旅館資料完成。")
+            self._logger.info(f" [ Saved ]    寫入 {county_name} 的旅館資料完成。")
         except Exception as e:
-            self._logger.error(" [ ERROR ]      寫入 Excel 異常 ！ ")
+            self._logger.error(" [ ERROR ]    寫入 Excel 異常 ！ ")
             raise e
 
 
