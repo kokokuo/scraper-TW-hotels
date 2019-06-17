@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+import asyncio
 from datetime import datetime
-from parser.agent import TaiwanHotelParserAgent
+from apps.assembler.hotel import HotelFieldRowsAssembler
+from apps.services.scraper import hotels_scraping_service
+from apps.services.storer import hotel_storing_service
 from settings.config import Config
-from store.excel import ExcelStore
 
 
 def ask_city():
@@ -17,16 +19,26 @@ def ask_city():
     return city_code
 
 
+async def parsing(city_name: str, filename: str):
+    counties = await hotels_scraping_service.find_counties(city_name)
+    for county in counties:
+        hotels = await hotels_scraping_service.find_hotels_by_county(city_name, county)
+        hotel_rows = HotelFieldRowsAssembler().assemble(hotels)
+        await hotel_storing_service.store2excel(county.name,
+                                                Config.PARSED_COLUMNS,
+                                                hotel_rows,
+                                                filename)
+
+
 def main():
     city_code = ask_city()
+    city_name = Config.CITIES_CODE[city_code]
     # 保存要抓取的縣市 xlsx 名稱
     begin = datetime.now()
-    filename = Config.CITIES_CODE[city_code] + "所有旅宿統計資料.xlsx"
-    excelstore = ExcelStore(filename)
-    hotel_parser = TaiwanHotelParserAgent(city_code)
-    hotel_parser.parsing(excelstore)
+    filename = city_name + "所有旅宿統計資料.xlsx"
+    asyncio.run(parsing(city_name, filename))
     end = datetime.now()
-    print(f" ! Finish - beginning: {begin}, end: {end}, spent: {end - begin}")
+    print(f"\n [ Finish ]      beginning: {begin}, end: {end}, spent: {end - begin} \n")
 
 
 if __name__ == "__main__":
