@@ -8,7 +8,7 @@ from infra.logging import scraping_logger
 from settings.config import Config
 
 
-class HotelContentsStoringService(object):
+class HotelContentVOsStoringService(object):
     def __init__(self, scraping_logger: Logger) -> None:
         self._logger = scraping_logger
 
@@ -33,4 +33,4 @@ class HotelContentsStoringService(object):
             raise e
 
 
-hotel_storing_service = HotelContentsStoringService(scraping_logger)
+hotel_storing_service = HotelContentVOsStoringService(scraping_logger)

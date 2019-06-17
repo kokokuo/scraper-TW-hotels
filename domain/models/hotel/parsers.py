@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from domain.models.hotel.field import HotelField
 from domain.models.region.county import CountyVO
 from domain.models.hotel.pages import PagesOfHotelVO
-from domain.models.hotel.content import HotelContent
+from domain.models.hotel.content import HotelContentVO
 from infra.asynchttp.resp import SyncHttpResponse
 from infra.asynchttp.header import FakeHeaderGenerator
 from infra.asynchttp.requester import RetryableRequester
@@ -80,25 +80,25 @@ class HotelsOfCountyParser(object):
             self._logger.error(f" [ ERROR ]     解析第 {page} 頁的所有旅館訪問連結取得 id 時異常 ！")
             raise e
 
-    async def _extract_hotels(self, hotels_id: List[int]) -> List[HotelContent]:
+    async def _extract_hotels(self, hotels_id: List[int]) -> List[HotelContentVO]:
         """
         透過該頁面下的所有旅館 id 取得旅館資料
         Args:
             hotels_id (List[int]): 該頁面的所有旅館 id
 
         Returns:
-            List[HotelContent]: 該頁面的所有旅館資料
+            List[HotelContentVO]: 該頁面的所有旅館資料
         """
-        hotels: List[HotelContent] = []
-        hotel_content_parser = HotelContentParser(Config.HOTEL_CONTENT_URL,
-                                                  Config.HOTEL_CONTENT_XPATH,
-                                                  scraping_logger,
-                                                  fake_header_generator,
-                                                  retryable_requester)
+        hotels: List[HotelContentVO] = []
+        hotel_content_parser = HotelContentVOParser(Config.HOTEL_CONTENT_URL,
+                                                    Config.HOTEL_CONTENT_XPATH,
+                                                    scraping_logger,
+                                                    fake_header_generator,
+                                                    retryable_requester)
         for index, hotel_id in enumerate(hotels_id):
             # 隨機產生在 1.5 - 2.2 之間的延遲 -> delay = self._delay_continue(0.5, 1.5)
             self._logger.info(f"開始爬取旅館 => 索引：{index}, ID: {hotel_id}")
-            hotel: HotelContent = await hotel_content_parser.extract(hotel_id)
+            hotel: HotelContentVO = await hotel_content_parser.extract(hotel_id)
             hotels.append(hotel)
         return hotels
 
@@ -108,7 +108,7 @@ class HotelsOfCountyParser(object):
         Args:
             pages (int): 該市區鄉鎮的總頁數
         Returns:
-            List[HotelContent]: 該市區鄉鎮的所有旅館資料
+            List[HotelContentVO]: 該市區鄉鎮的所有旅館資料
         """
         try:
             hotels_of_pages = []
@@ -130,7 +130,7 @@ class HotelsOfCountyParser(object):
             raise e
 
 
-class HotelContentParser(object):
+class HotelContentVOParser(object):
     """
     旅館資訊內容頁解析器
     """
@@ -146,7 +146,7 @@ class HotelContentParser(object):
         self._fake_header = fake_header_generator
         self._requester = retryable_requester
 
-    async def _logging(self, hotel: HotelContent):
+    async def _logging(self, hotel: HotelContentVO):
         self._logger.info(f" [ OK ]      完成爬取，旅館資料 ----------------")
         self._logger.info(f"旅館ID : {hotel.id}")
         self._logger.info(f"旅宿民稱 : {hotel.name}")
@@ -157,13 +157,13 @@ class HotelContentParser(object):
         self._logger.info(f"總房間數 : {hotel.rooms}")
         self._logger.info(f"定價 : {hotel.prices} \n")
 
-    async def extract(self, hotel_id: int) -> HotelContent:
+    async def extract(self, hotel_id: int) -> HotelContentVO:
         """
         透過訪問旅館資料的 id 取得該旅館頁面下的旅館相關資訊
         Args:
             hotel_id (int): 旅館 id
         Returns:
-            HotelContent: 該旅館資料
+            HotelContentVO: 該旅館資料
         """
         try:
             self._params = {"hotel_id": hotel_id}
@@ -185,14 +185,14 @@ class HotelContentParser(object):
             for field, xpath in self._hotel_content_xpath.items():
                 parsed[field] = retreived_func[field](hoteltree.xpath(xpath))
 
-            hotel = HotelContent(hotel_id,
-                                 parsed[HotelField.Name],
-                                 parsed[HotelField.Phone],
-                                 parsed[HotelField.Address],
-                                 parsed[HotelField.Rooms],
-                                 parsed[HotelField.Prices],
-                                 parsed[HotelField.Email],
-                                 parsed[HotelField.Url])
+            hotel = HotelContentVO(hotel_id,
+                                   parsed[HotelField.Name],
+                                   parsed[HotelField.Phone],
+                                   parsed[HotelField.Address],
+                                   parsed[HotelField.Rooms],
+                                   parsed[HotelField.Prices],
+                                   parsed[HotelField.Email],
+                                   parsed[HotelField.Url])
             await self._logging(hotel)
             return hotel
         except Exception as e:

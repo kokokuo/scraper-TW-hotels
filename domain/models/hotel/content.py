@@ -1,7 +1,7 @@
 from typing import Optional
 
 
-class HotelContent(object):
+class HotelContentVO(object):
     def __init__(self,
                  id: int,
                  name: str,
@@ -54,7 +54,7 @@ class HotelContent(object):
         return self._prices
 
     def __repr__(self):
-        return "<HotelContent: id=%r\n\
+        return "<HotelContentVO: id=%r\n\
             name=%r\n\
             address=%r\n\
             phone=%r\n\
@@ -71,5 +71,3 @@ class HotelContent(object):
             self._rooms,
             self._prices
         )
-
-

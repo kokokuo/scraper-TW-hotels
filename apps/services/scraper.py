@@ -5,7 +5,7 @@ from domain.models.region.selector import counties_selector
 from domain.models.region.county import CountyVO
 from domain.models.hotel.parsers import pages_parser, hotels_of_county_parser
 from domain.models.hotel.pages import PagesOfHotelVO
-from domain.models.hotel.content import HotelContent
+from domain.models.hotel.content import HotelContentVO
 from infra.logging import scraping_logger
 from settings.config import Config
 from parser.excepts import ReqSysAbnoramlError
@@ -24,7 +24,7 @@ class TaiwanHotelsScrapingService(object):
         counties: List[CountyVO] = await counties_selector.extract(city_name)
         return counties
 
-    async def find_hotels_by_county(self, city_name: str, county: CountyVO) -> List[HotelContent]:
+    async def find_hotels_by_county(self, city_name: str, county: CountyVO) -> List[HotelContentVO]:
         """
         找出此城市指定的鄉鎮市區內所有旅館資料
         Args:
@@ -32,11 +32,11 @@ class TaiwanHotelsScrapingService(object):
             county (CountyVO): 鄉鎮市區的 ValueObject
 
         Returns:
-            List[HotelContent]: 抓取下來的旅館資料列表
+            List[HotelContentVO]: 抓取下來的旅館資料列表
         """
         pages: PagesOfHotelVO = await pages_parser.extract(city_name, county)
         self._logger.info(f" [ Scraping ]       開始抓: {city_name} {county.name} ##########")
-        hotels: List[HotelContent] = await hotels_of_county_parser.extract_all(city_name, county, pages)
+        hotels: List[HotelContentVO] = await hotels_of_county_parser.extract_all(city_name, county, pages)
         return hotels
 
 
