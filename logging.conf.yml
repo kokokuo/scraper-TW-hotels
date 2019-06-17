@@ -1,0 +1,43 @@
+---
+version: 1
+disable_existing_loggers: False
+
+formatters:
+  simple:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s' # The default format for asctime is %Y-%m-%d %H:%M:%S
+  detail:
+    format:  | # multiple newline
+            ====> %(asctime)s - %(name)s - %(levelname)s - module > %(module)s (line %(lineno)d) - [pid %(process)d]
+            $> %(message)s
+    datefmt: ''
+
+handlers:
+  debug_console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
+
+  warning_recorder:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: WARNING
+    formatter: detail
+    filename: logs/hotel-scraping-error.log
+    when: h
+    interval: 24
+    backupCount: 20
+    encoding: utf8
+    utc: True
+
+ 
+loggers:
+  hotel_scraping:
+    level: DEBUG
+    handlers: [debug_console, warning_recorder]
+
+# Only exist when no sepcific logger name assgin in getLogger function
+# root:
+#   level: NOTSET
+#   handlers: [console]
+
+...
