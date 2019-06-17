@@ -12,13 +12,15 @@ class Config(object):
         "U": "花蓮縣", "X": "澎湖縣", "C": "基隆市", "O": "新竹市", "I": "嘉義市",
         "W": "金門縣", "Z": "連江縣"
     }
-
+    CITY_SELECTOR_XPATH = "//*[@id='sel_city']"
+    COUNTIES_OPTION_XPATH = "//*[@id='sel_area']/option"
+    HOTEL_HREF_XPATH = "//*[@id='searchpage']/div/div/div[3]/div/div/a/@href"
     WEBSITE_URL = "https://taiwanstay.net.tw"
     SEARCH_ROUNTE = "/tourism_web/search.php"
-    HOTEL_PAGE_ROUTE = "/tourism_web/hotel_content.php"
+    HOTEL_CONTENT_ROUTE = "/tourism_web/hotel_content.php"
     ABNORMAL_ROUTE = "/system_abnormal.php"
     SEARCH_URL = WEBSITE_URL + SEARCH_ROUNTE
-    HOTEL_PAGE_URL = WEBSITE_URL + HOTEL_PAGE_ROUTE
+    HOTEL_CONTENT_URL = WEBSITE_URL + HOTEL_CONTENT_ROUTE
     ABNORMAL_URL = WEBSITE_URL + ABNORMAL_ROUTE
 
     PARSED_COLUMNS: List[HotelField] = [
@@ -30,3 +32,28 @@ class Config(object):
         HotelField.Prices,
         HotelField.Url
     ]
+
+    HOTELS_COMMON_SERACH_PARAMS = {
+        "page": 1,
+        "sortBy": "",
+        "act": "",
+        "sel_hotel[]": [1, 2, 3],
+        "sel_keyword": "",
+        "sel_city": "",
+        "sel_keyword": "",
+        "sel_city": "",
+        "sel_area": "",
+        "sel_price": "",
+        "sel_room_num": "",
+        "sel_type": "",
+    }
+
+    HOTEL_CONTENT_XPATH = {
+        HotelField.Name: "//*[@id='right-hotel']/h2/text()",
+        HotelField.Address: "//*[@id='right-hotel']/div[4]/div[2]/p/span[2]/text()",
+        HotelField.Phone: "//*[@id='tel_div']/p/span[2]/text()",
+        HotelField.Email: "//*[@id='email_div']/a/p/span[2]/text()",
+        HotelField.Rooms: "//*[@id='right-hotel']/div[5]/div[2]/p/span[2]/text()",
+        HotelField.Prices: "//*[@id='right-hotel']/div[5]/div[3]/p/span[2]/text()",
+        HotelField.Url: "//*[@id='website_div']/p/span[2]/a"
+    }
