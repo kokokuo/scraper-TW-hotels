@@ -31,7 +31,8 @@ class CityVO(object):
         if not isinstance(other, CityVO):
             return False
         if self.name == other.name and self.code == other.code:
-            return True
+            if len(self.counties) > 0 and len(other.counties):
+                return sorted(self.counties) == sorted(other.counties)
         return False
 
     def __repr__(self):
