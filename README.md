@@ -6,6 +6,9 @@
 目前版本更新至 `Python 3.7` 並改用 `pipenv` 安裝套件。因鮮版的網站撈取資料方式不同，採用 `seleniunm` 模擬點擊縣市取得各縣市的市區鄉鎮資料後，再透過 `aiohttp` 改成非同步請求網頁 HTML，並使用 `lxml` 以 XPath 抓取資料，再搭配少量 `beautifuloup4` HTML 解析，抓取下來後ㄧ樣使用 `xlsxwriter` 寫入 Excel。
 過程中使用 `fake-useragent` 模擬 Header，另外因為網站多次請求會導致異常頁面，所以採用支持非同步的 Retry 函式庫 `tenacity` ，於偵測回應網址為異常網頁後，延遲依定秒數重新重試以確保資料撈取。
 
+架構方面，由於該程式應用單純，不含業務場景，於是原先採用輕量的 [Transaction Script](https://martinfowler.com/eaaCatalog/transactionScript.html) 流程，而後為了達到整潔、職責分離，嘗試以 Domain Model 去做切分，不過因於沒有業務場景，所以基本上以 Domain Service 搭配 Value Object 為主。
+
+
 ## 開發環境
 - 程式語言：Python 3.7
 - 使用套件：aiohttp, beautifuloup4, lxml, xlsxwriter, fake-useragent, seleniunm, tenacity
