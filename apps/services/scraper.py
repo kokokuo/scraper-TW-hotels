@@ -8,7 +8,7 @@ from domain.models.hotel.pages import PagesOfHotelVO
 from domain.models.hotel.content import HotelContentVO
 from infra.logging import scraping_logger
 from settings.config import Config
-from parser.excepts import ReqSysAbnoramlError
+from infra.excepts import ReqSysAbnoramlError
 
 
 class TaiwanHotelsScrapingService(object):
