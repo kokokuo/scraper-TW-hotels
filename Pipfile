@@ -17,6 +17,7 @@ lxml = "*"
 aiohttp = "*"
 tenacity = "*"
 fake-useragent = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.7"
