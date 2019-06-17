@@ -148,14 +148,14 @@ class HotelContentVOParser(object):
 
     async def _logging(self, hotel: HotelContentVO):
         self._logger.info(f" [ OK ]    旅館內容爬取完成 =============")
-        self._logger.info(f" [ 旅館 ID ] : {hotel.id}")
+        self._logger.info(f" [ 旅館 ID  ] : {hotel.id}")
         self._logger.info(f" [ 旅宿民稱 ] : {hotel.name}")
-        self._logger.info(f" [ 地址    ] : {hotel.address}")
-        self._logger.info(f" [ 訂房專線 ]: {hotel.phone}")
-        self._logger.info(f" [ 網址    ]: {hotel.url}")
+        self._logger.info(f" [ 地址     ] : {hotel.address}")
+        self._logger.info(f" [ 訂房專線 ] : {hotel.phone}")
+        self._logger.info(f" [ 網址     ] : {hotel.url}")
         self._logger.info(f" [ 電子信箱 ] : {hotel.email}")
         self._logger.info(f" [ 總房間數 ] : {hotel.rooms}")
-        self._logger.info(f" [ 定價    ] : {hotel.prices}")
+        self._logger.info(f" [ 定價     ] : {hotel.prices}")
         self._logger.info(f" =======================================")
 
     async def extract(self, hotel_id: int) -> HotelContentVO:
