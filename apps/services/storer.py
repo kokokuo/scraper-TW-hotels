@@ -27,7 +27,7 @@ class HotelContentVOsStoringService(object):
             for idx, hotel in enumerate(hotels):
                 # 第 0 列為 Header，所以 idx 需要 + 1
                 await excel.store_row(sheet, idx + 1, Config.PARSED_COLUMNS, hotel)
-            self._logger.info(f" [ Saved ]    寫入 {county_name} 的旅館資料完成。")
+            self._logger.info(f" [ Saved  ]    寫入 {county_name} 的旅館資料完成。")
         except Exception as e:
             self._logger.error(" [ ERROR ]    寫入 Excel 異常 ！ ")
             raise e

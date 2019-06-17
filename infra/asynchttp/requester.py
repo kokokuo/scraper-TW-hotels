@@ -1,5 +1,6 @@
 from urllib import parse
 from typing import Optional
+from logging import Logger
 from lxml import etree
 from aiohttp import ClientSession
 from tenacity import retry
@@ -10,7 +11,7 @@ from settings.config import Config
 
 
 class RetryableRequester(object):
-    def __init__(self, logger, abnormal_url: str) -> None:
+    def __init__(self, logger: Logger, abnormal_url: str) -> None:
         self._logger = logger
         self._abnormal_url = abnormal_url
 
@@ -34,9 +35,9 @@ class RetryableRequester(object):
                     await self._check_does_normal_resp(sync_resp)
             return sync_resp
         except ReqSysAbnoramlError as rse:
-            self._logger.error(f" ！ 網站異常 ！ #########################################")
-            self._logger.error(f">> 請求網址: {url}, params: {params}, headers: {headers}, cookies: {cookies}")
-            self._logger.error(f">> 回應網址：{rse.url}, 頁面狀態碼： {rse.http_code}\n" + rse.content)
+            self._logger.warning(f" [ Warning ]    請求網址的回應異常 ！ ")
+            self._logger.warning(f" 請求網址 : {url} | params: {params} | headers: {headers} | cookies: {cookies}")
+            self._logger.warning(f" 回應網址 : {rse.url} | 頁面狀態碼： {rse.http_code}\n" + rse.content)
             raise rse
 
     async def _check_does_normal_resp(self, resp: SyncHttpResponse) -> bool:

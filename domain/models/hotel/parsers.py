@@ -115,7 +115,7 @@ class HotelsOfCountyParser(object):
             self._params["sel_city"] = city_name
             self._params["sel_area"] = county.value
             for page in range(1, pages.total + 1):
-                self._logger.info(f" [ Next Page ]    第 {page} 頁 =====================")
+                self._logger.info(f" [ NextPage ]    第 {page} 頁 =====================")
                 self._params["page"] = page
                 fake_headers = await self._fake_header.generate()
                 resp: SyncHttpResponse = await self._requester.get(self._url,
