@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             // 指定程式的進入點檔案，如果不打算指定，要依照開啟的檔案做 F5 執行，可以改輸入 "${file}"
-            "program": "${workspaceFolder}/main.py",
+            "program": "${workspaceFolder}/scraping.py",
             "console": "integratedTerminal"
         }
     ]
