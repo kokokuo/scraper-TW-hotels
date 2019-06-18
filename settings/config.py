@@ -57,3 +57,9 @@ class Config(object):
         HotelField.Prices: "//*[@id='right-hotel']/div[5]/div[3]/p/span[2]/text()",
         HotelField.Url: "//*[@id='website_div']/p/span[2]/a"
     }
+    SAVE_EXCEL_TYPE = "E"
+    SAVE_JSON_TYPE = "J"
+    SAVE_OPTIONS = [
+        SAVE_EXCEL_TYPE,
+        SAVE_JSON_TYPE
+    ]
