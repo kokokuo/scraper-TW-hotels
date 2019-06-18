@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from typing import List
 from logging import Logger
-from apps.dto.hotel import HotelFieldRow
+from apps.dto.hotel import HotelContentRow
 from domain.models.hotel.field import HotelField
-from domain.models.store.excel import ExcelStore
+from domain.models.store.excel import HotelsExcelStorer
+from domain.models.store.json import HotelsJsonStorer
 from infra.logging import scraping_logger
 from settings.config import Config
 
@@ -14,22 +15,35 @@ class HotelContentVOsStoringService(object):
 
     async def store2excel(self,
                           county_name: str,
-                          fields: List[HotelField],
-                          hotels: List[HotelFieldRow],
+                          parsed_columns: List[HotelField],
+                          hotels: List[HotelContentRow],
                           filename: str):
         try:
-            excel = ExcelStore(filename, self._logger)
+            excel = HotelsExcelStorer(filename, self._logger)
             # 新增此市區鄉鎮的 Sheet
-            sheet = excel.add_sheet(county_name, Config.PARSED_COLUMNS)
+            sheet = excel.add_sheet(county_name, parsed_columns)
             self._logger.info(f" [ Saving ]    寫入 {county_name} 資料至 Excel 中....")
             # 抓出每一的鄉鎮的所有頁面資料
-            hotel: HotelFieldRow
+            hotel: HotelContentRow
             for idx, hotel in enumerate(hotels):
                 # 第 0 列為 Header，所以 idx 需要 + 1
-                await excel.store_row(sheet, idx + 1, Config.PARSED_COLUMNS, hotel)
-            self._logger.info(f" [ Saved  ]    寫入 {county_name} 的旅館資料完成。")
+                await excel.store_row(sheet, idx + 1, parsed_columns, hotel)
+            self._logger.info(f" [ Saved  ]    寫入 {county_name} 的旅館資料至 Excel 完成。")
         except Exception as e:
             self._logger.error(" [ ERROR ]    寫入 Excel 異常 ！ ")
+            raise e
+
+    async def store2json(self,
+                         county_name: str,
+                         hotels: List[HotelContentRow],
+                         filename: str):
+        try:
+            jsoner = HotelsJsonStorer(filename, self._logger)
+            self._logger.info(f" [ Saving ]    寫入 {county_name} 資料至 Json 中....")
+            await jsoner.store_hotels(county_name, hotels)
+            self._logger.info(f" [ Saved  ]    寫入 {county_name} 的旅館資料至 Json 完成。")
+        except Exception as e:
+            self._logger.error(" [ ERROR ]    寫入 Json 異常 ！ ")
             raise e
 
 
