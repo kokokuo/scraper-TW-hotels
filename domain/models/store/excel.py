@@ -4,10 +4,10 @@ from typing import Optional, List
 from xlsxwriter import Workbook
 from xlsxwriter.worksheet import Worksheet
 from domain.models.hotel.field import HotelField
-from apps.dto.hotel import HotelFieldRow
+from apps.dto.hotel import HotelContentRow
 
 
-class ExcelStore(object):
+class HotelsExcelStorer(object):
     def __init__(self, filename: str, scraping_logger: Logger) -> None:
         self._logger = scraping_logger
         self._workbook = Workbook(filename)
@@ -56,7 +56,7 @@ class ExcelStore(object):
                         sheet: Worksheet,
                         row: int,
                         parsed_columns: List[HotelField],
-                        hotel: HotelFieldRow) -> None:
+                        hotel: HotelContentRow) -> None:
 
         parsed_header: HotelField
         # 由 Columns 尋訪，並找出資料欄位
