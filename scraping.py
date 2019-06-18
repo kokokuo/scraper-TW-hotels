@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import asyncio
+from typing import List
 from datetime import datetime
-from apps.assembler.hotel import HotelFieldRowsAssembler
+from apps.assembler.hotel import HotelContentRowsAssembler
+from apps.dto.hotel import HotelContentRow
 from apps.services.scraper import hotels_scraping_service
 from apps.services.storer import hotel_storing_service
 from settings.config import Config
@@ -29,18 +31,20 @@ def ask_save_option():
     return save_option
 
 
-async def parsing(city_name: str, filename: str, save_option: str):
+async def parsing(city_name: str, save_option: str):
     counties = await hotels_scraping_service.find_counties(city_name)
     for county in counties:
         hotels = await hotels_scraping_service.find_hotels_by_county(city_name, county)
-        hotel_rows = HotelFieldRowsAssembler().assemble(hotels)
+        hotel_rows: List[HotelContentRow] = HotelContentRowsAssembler().assemble(hotels)
         if save_option is Config.SAVE_EXCEL_TYPE:
+            filename = city_name + "所有旅宿統計資料.xlsx"
             await hotel_storing_service.store2excel(county.name,
                                                     Config.PARSED_COLUMNS,
                                                     hotel_rows,
                                                     filename)
         else:
-            print("尚未實作儲存 Json 格式的代碼 ！")
+            filename = city_name + "所有旅宿統計資料.json"
+            await hotel_storing_service.store2json(county.name, hotel_rows, filename)
 
 
 def main():
@@ -49,8 +53,7 @@ def main():
     city_name = Config.CITIES_CODE[city_code]
     # 保存要抓取的縣市 xlsx 名稱
     begin = datetime.now()
-    filename = city_name + "所有旅宿統計資料.xlsx"
-    parsing_corountine = parsing(city_name, filename, save_option)
+    parsing_corountine = parsing(city_name, save_option)
     asyncio.run(parsing_corountine)
     end = datetime.now()
 

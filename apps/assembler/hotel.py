@@ -1,12 +1,12 @@
 from typing import List
-from apps.dto.hotel import HotelFieldRow
+from apps.dto.hotel import HotelContentRow
 from domain.models.hotel.content import HotelContentVO
 from domain.models.hotel.field import HotelField
 
 
-class HotelFieldRowsAssembler(object):
-    def assemble(self, hotels: List[HotelContentVO]) -> List[HotelFieldRow]:
-        rows: List[HotelFieldRow] = []
+class HotelContentRowsAssembler(object):
+    def assemble(self, hotels: List[HotelContentVO]) -> List[HotelContentRow]:
+        rows: List[HotelContentRow] = []
         hotel: HotelContentVO
         for hotel in hotels:
             rows.append({
