@@ -1,5 +1,6 @@
-import json
+import os
 import re
+import json
 from logging import Logger
 from io import BytesIO
 from collections import OrderedDict
@@ -51,9 +52,44 @@ class HotelsJsonStorer(object):
         result = json.dumps(stored_hotels, ensure_ascii=False, indent=4, sort_keys=True)
         return result
 
+    def _create_empty_json(self, filename: str) -> None:
+        """
+        建立一個空的 json 檔案
+        Args:
+            filename (str): 檔案路徑
+        """
+        pathdir = os.path.dirname(filename)
+        if pathdir and not os.path.exists(pathdir):
+            os.makedirs(pathdir)
+        # 建立空檔案
+        open(self._filename, "a").close()
+
+    def _check_existed(self, filename: str) -> bool:
+        """
+        檢查 Json 檔案是否存在
+        Args:
+            filename (str): 檔案路徑名稱
+
+        Returns:
+            bool: 是否存在
+        """
+        if os.path.exists(self._filename):
+            return True
+        return False
+
     async def store_hotels(self,
                            county_name: str,
                            hotels: List[HotelContentRow]) -> None:
+        """
+        儲存一批鄉鎮市區的所有旅館資料
+        Args:
+            county_name (str): 鄉鎮市區名稱
+            hotels (List[HotelContentRow]): 該鄉鎮市區的所有旅館資料
+
+        """
+        if not self._check_existed(self._filename):
+            self._create_empty_json(self._filename)
+
         async with aiof.open(self._filename, "r+", encoding="utf8") as fp:
             counties_hotels: OrderedDict[str, List[Dict[str, str]]]
             raw_data = await fp.read()

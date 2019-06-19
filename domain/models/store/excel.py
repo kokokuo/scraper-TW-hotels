@@ -52,11 +52,21 @@ class HotelsExcelStorer(object):
             return source
         return ""
 
-    async def store_row(self,
-                        sheet: Worksheet,
-                        row: int,
-                        parsed_columns: List[HotelField],
-                        hotel: HotelContentRow) -> None:
+    async def store_hotels(self,
+                           sheet: Worksheet,
+                           parsed_columns: List[HotelField],
+                           hotels: List[HotelContentRow]) -> None:
+        # 抓出每一的鄉鎮的所有頁面資料
+        hotel: HotelContentRow
+        for idx, hotel in enumerate(hotels):
+            # 第 0 列為 Header，所以 idx 需要 + 1
+            await self._store_hotel(sheet, idx + 1, parsed_columns, hotel)
+
+    async def _store_hotel(self,
+                           sheet: Worksheet,
+                           row: int,
+                           parsed_columns: List[HotelField],
+                           hotel: HotelContentRow) -> None:
 
         parsed_header: HotelField
         # 由 Columns 尋訪，並找出資料欄位
