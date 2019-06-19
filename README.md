@@ -4,19 +4,19 @@
 為協助女友解決工作需要抓取台灣所有合法的旅宿資訊，因此找到「台灣旅宿網」此網站並爬取旅館、民宿的基本資訊，並保存到 Excel 檔案中。該程式透過 `Python 2.7`、`requests`、`beautifuloup4` 和 `xlsxwriter` 開發並於 2017/08/05 完成，後因該網站改版更新，已有提供 CSV 資料匯出所以不需要此功能，維護更新只單純練習與更新版本為主。
 
 
-**<p align="center">「台灣旅宿網」截圖</p>**
+**<p align="center">「台灣旅宿網」首頁截圖</p>**
 <p align="center">
-  <img src="../master/Images/TWHotels-MainPage.png?raw=true">
+  <img src="../master/Images/TWHotels-MainPage.png?raw=true" width="640px">
 </p>
 
 **<p align="center">「台灣旅宿網」旅館列表截圖</p>**
 <p align="center">
-  <img src="../master/Images/TWHotels-MultiHotelsOfPage.png?raw=true">
+  <img src="../master/Images/TWHotels-MultiHotelsOfPage.png?raw=true" width="640px">
 </p>
 
 **<p align="center">「台灣旅宿網」資訊頁面截圖</p>**
 <p align="center">
-  <img src="../master/Images/TWHotels-SingleHotelInfo.png?raw=true">
+  <img src="../master/Images/TWHotels-SingleHotelInfo.png?raw=true" width="640px">
 </p>
 
 
@@ -30,14 +30,14 @@
 **<p align="center">儲存至 Excel - 金門縣</p>**
 
 <p align="center">
-  <img src="../master/Images/SaveExcel.png?raw=true">
+  <img src="../master/Images/SaveExcel.png?raw=true" width="640px">
 </p>
 
 
 **<p align="center">儲存至 Json 資料 - 台北市</p>**
 
 <p align="center">
-  <img src="../master/Images/SaveExcel.png?raw=true">
+  <img src="../master/Images/SaveJson.png?raw=true" width="640px">
 </p>
 
 
@@ -63,12 +63,12 @@ $> python scraping.py # 執行
 ## 執行過程
 
 **<p align="center">指令輸入</p>**
+
 <p align="center">
-  <img src="../master/Images/Run.png?raw=true">
+  <img src="../master/Images/Run.png?raw=true" width="640px">
 </p>
 
-**<p align="center">執行過程</p>**
-
+**<p align="center">抓取過程</p>**
 <p align="center">
-  <img src="../master/Images/Parsing.png?raw=true">
+  <img src="../master/Images/Parsing.png?raw=true" width="640px">
 </p>
