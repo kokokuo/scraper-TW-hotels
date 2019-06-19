@@ -5,7 +5,8 @@ from datetime import datetime
 from apps.assembler.hotel import HotelContentRowsAssembler
 from apps.dto.hotel import HotelContentRow
 from apps.services.scraper import hotels_scraping_service
-from apps.services.storer import hotel_storing_service
+from apps.services.storer import HotelStoringExcelService, HotelStoringJsonService
+from infra.logging import scraping_logger
 from settings.config import Config
 import colorful
 
@@ -31,20 +32,35 @@ def ask_save_option():
     return save_option
 
 
-async def parsing(city_name: str, save_option: str):
+async def parse_to_excel(city_name: str):
+    filename = city_name + "所有旅宿統計資料.xlsx"
+    stroing_excel_service = HotelStoringExcelService(filename, scraping_logger)
     counties = await hotels_scraping_service.find_counties(city_name)
     for county in counties:
         hotels = await hotels_scraping_service.find_hotels_by_county(city_name, county)
         hotel_rows: List[HotelContentRow] = HotelContentRowsAssembler().assemble(hotels)
-        if save_option is Config.SAVE_EXCEL_TYPE:
-            filename = city_name + "所有旅宿統計資料.xlsx"
-            await hotel_storing_service.store2excel(county.name,
-                                                    Config.PARSED_COLUMNS,
-                                                    hotel_rows,
-                                                    filename)
-        else:
-            filename = city_name + "所有旅宿統計資料.json"
-            await hotel_storing_service.store2json(county.name, hotel_rows, filename)
+        await stroing_excel_service.store(county.name,
+                                          Config.PARSED_COLUMNS,
+                                          hotel_rows,
+                                          filename)
+    stroing_excel_service.close()
+
+
+async def parse_to_json(city_name: str):
+    filename = city_name + "所有旅宿統計資料.json"
+    storing_json_service = HotelStoringJsonService(scraping_logger)
+    counties = await hotels_scraping_service.find_counties(city_name)
+    for county in counties:
+        hotels = await hotels_scraping_service.find_hotels_by_county(city_name, county)
+        hotel_rows: List[HotelContentRow] = HotelContentRowsAssembler().assemble(hotels)
+        await storing_json_service.store(county.name, hotel_rows, filename)
+
+
+async def parsing(city_name: str, save_option: str):
+    if save_option == Config.SAVE_EXCEL_TYPE:
+        await parse_to_excel(city_name)
+    else:
+        await parse_to_json(city_name)
 
 
 def main():
