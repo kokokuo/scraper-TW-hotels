@@ -46,7 +46,7 @@
 ## 架構設計
 由於該程式應用單純，不含業務場景，於是原先採用輕量的 [Transaction Script](https://martinfowler.com/eaaCatalog/transactionScript.html) 流程。而後為了達到整潔、職責分離，嘗試以 [DDD](https://en.wikipedia.org/wiki/Domain-driven_design) 的思維導入，透過 [Domain Model](https://martinfowler.com/eaaCatalog/domainModel.html) 去劃分，不過因為此爬蟲程式的 Scope 較小，業務場景難以捕捉，所以基本上以 [Domain Service](http://zhangyi.xyz/how-to-identify-application-service/) 搭配 [Value Object](https://martinfowler.com/bliki/ValueObject.html) 為主，或許未來可以嘗試再做調整。
 
-```bash
+```
 --- apps # 應用服務模組
 |  |
 |   -- assembler # 組裝器，負責從不同的 Domain 的資料組裝成需要的資料集並轉換成 DTO 回傳
