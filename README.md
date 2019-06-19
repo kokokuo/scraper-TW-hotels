@@ -1,7 +1,7 @@
-# scraper-TW-hotels (台灣旅宿爬蟲)
+# scraper-TW-hotels (台灣旅宿網爬蟲程式)
 
 ## 簡介
-為協助女友解決工作需要抓取台灣所有合法的旅宿資訊，因此找到「台灣旅宿網」此網站並爬取旅館、民宿的基本資訊，並保存到 Excel 檔案中。該程式透過 `Python 2.7`、`requests`、`beautifuloup4` 和 `xlsxwriter` 開發並於 2017/08/05 完成，後因該網站改版更新，已有提供 CSV 資料匯出所以不需要此功能，維護更新只單純練習與更新版本為主。
+為協助女友解決工作需要抓取台灣所有合法的旅宿資訊，因此找到「台灣旅宿網」此網站並爬取旅館、民宿的基本資訊，並保存到 Excel 檔案中。該程式於 2017/08/05 完成，透過 `Python 2.7`、`requests`、`beautifuloup4` 實作，後因該網站改版更新，已有提供 CSV 資料匯出所以不需要此功能，維護更新只單純練習與更新版本為主。
 
 
 **<p align="center">「台灣旅宿網」首頁截圖</p>**
@@ -43,7 +43,33 @@
 
 過程中使用 `fake-useragent` 模擬 Header，另外因為網站多次請求會導致異常頁面，所以採用支持非同步的 Retry 函式庫 `tenacity` ，於偵測回應網址為異常網頁後，延遲依定秒數重新重試以確保資料撈取。
 
-架構方面，由於該程式應用單純，不含業務場景，於是原先採用輕量的 [Transaction Script](https://martinfowler.com/eaaCatalog/transactionScript.html) 流程，而後為了達到整潔、職責分離，嘗試以 Domain Model 去做切分，不過因於沒有業務場景，所以基本上以 Domain Service 搭配 Value Object 為主。
+## 架構設計
+由於該程式應用單純，不含業務場景，於是原先採用輕量的 [Transaction Script](https://martinfowler.com/eaaCatalog/transactionScript.html) 流程。而後為了達到整潔、職責分離，嘗試以 DDD 的思維導入，透過 Domain Model 去劃分，不過因為此爬蟲程式的 Scope 較小，業務場景難以捕捉，所以基本上以 Domain Service 搭配 Value Object 為主，或許未來可以嘗試再做調整。
+
+```bash
+--- apps # 應用服務模組
+|  |
+|   -- assembler # 組裝器，負責從不同的 Domain 的資料組裝成需要的資料集並轉換成 DTO 回傳
+|  |
+|   -- dto # 資料傳輸物件：展示層或 View 層需要的資料
+|  |
+|   -- services # 應用服務層：承接來自 Controller 的資料並作為處理業務需求相關的服務動作之第一層介面，類似 Facade，包裝業務場景的功能細節，會去調用 Domain 層的 Models 處理邏輯，以及儲存至資料庫等動作，或是做 Trasacntion 的檢查、日誌紀錄等。
+|
+--- domain # 領域模組：負責業務場景的細節
+|   |
+|    -- models # 領域模型
+|
+--- infra # 基礎建設模組：放置領域模型或應用服務會使用的基礎工具或服務或實現領域會調用的底層細節
+|   | 
+|   -- asynchttp
+|   |
+|   -- excepts
+|   |
+|   -- logging
+|
+---- settings # 存放設定檔
+
+```
 
 
 ## 開發環境
