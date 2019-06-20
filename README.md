@@ -44,7 +44,7 @@
 過程中使用 `fake-useragent` 模擬 Header，另外因為網站多次請求會導致異常頁面，所以採用支持非同步的 Retry 函式庫 `tenacity` ，於偵測回應網址為異常網頁後，延遲依定秒數重新重試以確保資料撈取。
 
 ## 架構設計
-由於該程式應用單純，不含業務場景，於是原先採用輕量的 [Transaction Script](https://martinfowler.com/eaaCatalog/transactionScript.html) 流程。而後為了達到整潔、職責分離，嘗試以 [DDD](https://en.wikipedia.org/wiki/Domain-driven_design) 的思維導入，透過 [Domain Model](https://martinfowler.com/eaaCatalog/domainModel.html) 去劃分，不過因為此爬蟲程式的 Scope 較小，業務場景難以捕捉，所以基本上以 [Domain Service](http://zhangyi.xyz/how-to-identify-application-service/) 搭配 [Value Object](https://martinfowler.com/bliki/ValueObject.html) 為主，或許未來可以嘗試再做調整。
+由於該程式應用單純，不含業務場景，於是原先採用輕量的 [Transaction Script](https://martinfowler.com/eaaCatalog/transactionScript.html) 流程。而後為了達到整潔、職責分離，嘗試以 [DDD](https://en.wikipedia.org/wiki/Domain-driven_design) 的思維導入，透過 [Domain Model](https://martinfowler.com/eaaCatalog/domainModel.html) 設計，並且以 DDD 的 Module 方式劃分區塊，不過因為此爬蟲程式的 Scope 較小，業務場景難以捕捉，所以基本上以 [Domain Service](http://zhangyi.xyz/how-to-identify-application-service/) 搭配 [Value Object](https://martinfowler.com/bliki/ValueObject.html) 為主，或許未來可以嘗試再做調整。
 
 ```
 --- apps # 應用服務模組
